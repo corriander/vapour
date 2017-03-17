@@ -159,6 +159,8 @@ class Library(object):
 
     def archive(self, appmanifest):
         """Copy game data and manifest to the archive."""
+        abort_if_steam_is_running()
+
         archive = Archive() # There's only one anyway.
 
         self._archive_manifest(appmanifest, archive)
@@ -232,6 +234,21 @@ class Library(object):
         )
         return os.linesep.join(rows)
 
+    def remove(self, appmanifest, force=False):
+        """Remove the game associated with this appmanifest.
+
+        Raises an exception if this game is not archived unless force
+        is True.
+        """
+        abort_if_steam_is_running()
+
+        archive = Archive()
+        if not force and appmanifest.name not in archive.games.keys():
+            raise RuntimeError("Game is not archived; aborting!")
+        else:
+            os.remove(appmanifest.path)
+            shutil.rmtree(appmanifest.install_path)
+
     def select(self, regex):
         matches = []
         for name, manifest in self.games.items():
@@ -252,6 +269,8 @@ class Archive(Library):
     @staticmethod
     def restore(appmanifest, lib):
         """Copy game data from the archive."""
+        abort_if_steam_is_running()
+
         installdir = os.path.basename(appmanifest.install_path)
         src = os.path.join(os.path.dirname(appmanifest.path),
                            installdir)
@@ -287,3 +306,15 @@ def get_steam_path():
     value_typeflag = winreg.QueryValueEx(steam_key,
                                          REGISTRY_KEY_STEAMPATH)
     return os.path.normpath(value_typeflag[0])
+
+
+def abort_if_steam_is_running():
+    if steam_is_running():
+        raise RuntimeError(
+            "Steam is running; probably a good idea to exit..."
+        )
+
+
+def steam_is_running():
+    return 'Steam.exe' in set([ps.name()
+                               for ps in psutil.process_iter()])
