@@ -59,7 +59,11 @@ class AppManifest(object):
 
     @property
     def id(self):
-        return int(self._state['appID'])
+        try:
+            return int(self._state['appID'])
+        except KeyError:
+            # We assume there is an app ID, but maybe lowercase.
+            return int(self._state['appid'])
 
     @property
     def _installdir(self):
