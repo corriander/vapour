@@ -32,6 +32,7 @@ See also:
 import os
 import re
 import glob
+import psutil
 import shutil
 import winreg
 
@@ -45,6 +46,8 @@ PATH_ARCHIVE = 'L:/archive/games/steam'	# TODO: Configurable.
 FILENAME_LIBRARY_FOLDERS = 'steamapps/libraryfolders.vdf'
 
 
+# NOTE: It might be more semantically accurate to call this a game.
+#       It's OK for a game to be built from an AppManifest...
 class AppManifest(object):
     """Encapsulation of metadata in appmanifest ACF."""
 
@@ -72,7 +75,6 @@ class AppManifest(object):
         except KeyError:
             return self._state['InstallDir']
 
-
     @property
     def install_path(self):
         root_dir = os.path.join(os.path.dirname(self.path), 'common')
@@ -99,15 +101,57 @@ class AppManifest(object):
         """Steam Application state dictionary."""
         return self._metadata['AppState']
 
-    def move(self, dst):
+    def archive(self):
+        """Copy game data and manifest to the archive."""
+        abort_if_steam_is_running() # TODO: Necessary?
+
+        archive = Archive() # There's only one anyway.
+
+        self._archive_manifest(archive)
+        try:
+            self._archive_install_files(archive)
+        except:
+            self._backout__delete_manifest(archive)
+            raise IOError("Archiving failed.")
+
+    def _archive_manifest(self, archive):
+        src = self.path
+        dst = os.path.join(archive.path,
+                           os.path.basename(self.path))
+        shutil.copyfile(src, dst)
+
+    def _archive_install_files(self, archive):
+        src = self.install_path
+        dst = os.path.join(archive.path,
+                           os.path.basename(self.install_path))
+        shutil.copytree(src, dst)
+
+    def _backout__delete_manifest(self, archive):
+        archived_manifest_path = os.path.join(
+            archive.path,
+            os.path.basename(self.path)
+        )
+        os.remove(archived_manifest_path)
+
+    def move(self, dst, force=False):
         """Move game data to a new library."""
+        # TODO: Introduce a fast version of this that doesn't copy
+        #       if on same filesystem.
+        abort_if_steam_is_running()
+
         assert isinstance(dst, Library)
 
+        if not force:
+            abort_if_not_archived(self)
+
+        # Some older manifests have non-relative install paths. It's
+        # best to just change these at source...
         split_path = tuple(filter(
             None,
             os.path.split(os.path.normpath(self._installdir))
         ))
-        assert len(split_path) == 1, "Non-relative installdir"
+        msg = "Non-relative installdir in appmanifest."
+        assert len(split_path) == 1, msg
 
         new_path = self._copy_manifest(dst)
         try:
@@ -158,42 +202,19 @@ class Library(object):
         return os.path.join(self.data_root, '*.acf')
 
     def archive(self, appmanifest):
-        """Copy game data and manifest to the archive."""
-        abort_if_steam_is_running()
-
-        archive = Archive() # There's only one anyway.
-
-        self._archive_manifest(appmanifest, archive)
-        try:
-            self._archive_install_files(appmanifest, archive)
-        except:
-            self._backout__delete_manifest(appmanifest, archive)
-            raise IOError("Archiving failed.")
-
-    @staticmethod
-    def _archive_manifest(appmanifest, archive):
-        src = appmanifest.path
-        dst = os.path.join(archive.path,
-                           os.path.basename(appmanifest.path))
-        shutil.copyfile(src, dst)
-
-    @staticmethod
-    def _archive_install_files(appmanifest, archive):
-        src = appmanifest.install_path
-        dst = os.path.join(archive.path,
-                           os.path.basename(appmanifest.install_path))
-        shutil.copytree(src, dst)
-
-    @staticmethod
-    def _backout__delete_manifest(appmanifest, archive):
-        archived_manifest_path = os.path.join(
-            archive.path,
-            os.path.basename(appmanifest.path)
-        )
-        os.remove(archived_manifest_path)
+        appmanifest.archive()
+    archive.__doc__ = AppManifest.archive.__doc__
 
     def get_manifests(self):
         return list(map(AppManifest, glob.glob(self._acf_glob)))
+
+    def faulty_games(self):
+        path = self.install_path
+        return {
+            appmanifest.name: appmanifest
+            for appmanifest in self.games.values()
+            if not appmanifest.install_path.startswith(path)
+        }
 
     def as_table(self, sort_by=('name.lower',), fmt='human'):
 
@@ -243,8 +264,8 @@ class Library(object):
         abort_if_steam_is_running()
 
         archive = Archive()
-        if not force and appmanifest.name not in archive.games.keys():
-            raise RuntimeError("Game is not archived; aborting!")
+        if not force:
+            abort_if_not_archived(appmanifest)
         else:
             os.remove(appmanifest.path)
             shutil.rmtree(appmanifest.install_path)
@@ -308,7 +329,15 @@ def get_steam_path():
     return os.path.normpath(value_typeflag[0])
 
 
+def abort_if_not_archived(appmanifest):
+    # TODO: This is begging to be a decorator.
+    archive = Archive()
+    if appmanifest.name not in archive.games.keys():
+        raise RuntimeError("Game is not archived; aborting!")
+
+
 def abort_if_steam_is_running():
+    # TODO: This is begging to be a decorator.
     if steam_is_running():
         raise RuntimeError(
             "Steam is running; probably a good idea to exit..."
