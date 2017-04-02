@@ -24,23 +24,23 @@ AS
 $DEF$
 
 BEGIN
-    
+
     DROP TABLE IF EXISTS pg_temp._import_frames;
     CREATE TEMPORARY TABLE pg_temp._import_frames (frame int, t_delta float);
-    
+
     EXECUTE format(
                 $$
-                COPY pg_temp._import_frames 
+                COPY pg_temp._import_frames
                 FROM '%s' DELIMITER ',' CSV HEADER;
-                $$, 
+                $$,
                 p_path
             );
-    
+
        WITH dataset_insert AS (
                 INSERT INTO fraps.dataset (filepath)
                 VALUES (p_path)
                 ON CONFLICT DO NOTHING
-                RETURNING id           
+                RETURNING id
             )
      INSERT INTO fraps.frames
      SELECT dsi.id
@@ -53,7 +53,7 @@ BEGIN
           , frame
          ON CONFLICT DO NOTHING
      ;
-    
+
 END
 $DEF$
 LANGUAGE plpgsql
@@ -69,16 +69,16 @@ COMMENT ON FUNCTION fraps.import_frametimes IS 'Import *frametimes.csv generated
 -- DELETE FROM fraps.dataset;
 
 DROP VIEW IF EXISTS fraps.dataset_view;
-CREATE VIEW fraps.dataset_view AS 
+CREATE VIEW fraps.dataset_view AS
 SELECT id
      , filepath
      , regexp_replace(filepath, '.*[\\/]([^ ]+).*$', '\1') AS exe
      , to_timestamp(
 	       regexp_replace(
-			   filepath, 
-			   '.*(\d\d\d\d-\d\d-\d\d \d\d-\d\d-\d\d-\d\d).*', 
+			   filepath,
+			   '.*(\d\d\d\d-\d\d-\d\d \d\d-\d\d-\d\d-\d\d).*',
 			   '\1'
-	       ), 
+	       ),
 		   'YYYY-MM-DD HH24-MI-SS-MS'
 	   ) AS t0
   FROM fraps.dataset
@@ -117,12 +117,12 @@ RETURN QUERY
                        SELECT row_number() OVER () AS id
                             , t.t
                          FROM generate_series(
-                                  (SELECT t0 FROM frames_meta), 
-                                  (SELECT t0 FROM frames_meta) + (floor((SELECT t1 FROM frames_meta) / 1000) ||' seconds')::interval, 
+                                  (SELECT t0 FROM frames_meta),
+                                  (SELECT t0 FROM frames_meta) + (floor((SELECT t1 FROM frames_meta) / 1000) ||' seconds')::interval,
                                   INTERVAL '1000 milliseconds'
                               ) AS t(t)
                   )
-           SELECT l.id 
+           SELECT l.id
                 , l.t AS "t_i"
                 , r.t AS "t_(i+1)"
              FROM _bins l
@@ -136,7 +136,7 @@ RETURN QUERY
               FROM (SELECT *
                          , (SELECT t0 FROM frames_meta) + (t_delta || ' milliseconds')::interval AS t
                       FROM frames) fr
-              JOIN bins 
+              JOIN bins
                 ON fr.t >= bins."t_i"
                AND fr.t < bins."t_(i+1)"
        )
@@ -151,3 +151,48 @@ END
 $DEF$
 LANGUAGE plpgsql
 ;
+
+-- GPU-Z data.
+CREATE SCHEMA gpuz;
+
+DROP TABLE IF EXISTS gpuz.sensor;
+CREATE TABLE gpuz.sensor (
+    t timestamp PRIMARY KEY NOT NULL,
+    f_core float,
+    f_mem float,
+    temp float,
+    speed_fan_pc smallint,
+    speed_fan_rpm int,
+    load smallint,
+    mem_controller_load smallint,
+    mem_usage_dedicated int,
+    mem_usage_dynamic int,
+    vddc float
+);
+
+COMMENT ON TABLE gpuz.sensor IS 'Frequencies (f_*) are [MHz], Temperature [degC], Mem. usage in [MiB], VDDC in [V]. The rest are [%].';
+CREATE OR REPLACE FUNCTION gpuz.import_sensor (p_path varchar(260))
+RETURNS void
+AS
+$DEF$
+BEGIN
+
+	CREATE TEMPORARY TABLE pg_temp._import (LIKE gpuz.sensor);
+
+	EXECUTE format(
+        $$COPY pg_temp._import FROM '%s' DELIMITER ',' CSV;$$,
+        p_path
+    );
+
+	INSERT INTO gpuz.sensor
+    SELECT *
+      FROM pg_temp._import
+    ON CONFLICT DO NOTHING;
+
+    DROP TABLE pg_temp._import;
+
+END
+$DEF$
+language plpgsql;
+
+-- SELECT gpuz.import_sensor('L:\data\gpuz\sensor.log.csv');
