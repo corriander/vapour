@@ -8,27 +8,29 @@ CREATE TABLE fraps.dataset (
 );
 -- ALTER TABLE fraps.dataset ADD CONSTRAINT dataset_filepath_key UNIQUE (filepath);
 
-DROP TABLE IF EXISTS fraps.frametimes;
-CREATE TABLE fraps.frametimes (
+DROP TABLE IF EXISTS fraps.frames;
+CREATE TABLE fraps.frames (
     dataset_id bigint REFERENCES fraps.dataset (id),
     frame int NOT NULL,
-    ms float NOT NULL,
+    t_delta float NOT NULL,
     UNIQUE (dataset_id, frame)
 );
 
-CREATE OR REPLACE FUNCTION fraps.import_frametimes (p_path varchar(260))
+COMMENT ON TABLE fraps.frames IS 'Each frame recorded by Fraps and the time delta (ms)';
+
+CREATE OR REPLACE FUNCTION fraps.import_frames (p_path varchar(260))
 RETURNS void
 AS
 $DEF$
 
 BEGIN
     
-    DROP TABLE IF EXISTS pg_temp._import_frametimes;
-    CREATE TEMPORARY TABLE pg_temp._import_frametimes (frame int, ms float);
+    DROP TABLE IF EXISTS pg_temp._import_frames;
+    CREATE TEMPORARY TABLE pg_temp._import_frames (frame int, t_delta float);
     
     EXECUTE format(
                 $$
-                COPY pg_temp._import_frametimes 
+                COPY pg_temp._import_frames 
                 FROM '%s' DELIMITER ',' CSV HEADER;
                 $$, 
                 p_path
@@ -40,12 +42,12 @@ BEGIN
                 ON CONFLICT DO NOTHING
                 RETURNING id           
             )
-     INSERT INTO fraps.frametimes
+     INSERT INTO fraps.frames
      SELECT dsi.id
           , frame
-          , ms
+          , t_delta
        FROM dataset_insert dsi
-          , pg_temp._import_frametimes
+          , pg_temp._import_frames
       WHERE dsi.id IS NOT NULL
       ORDER BY dsi.id
           , frame
@@ -65,3 +67,87 @@ COMMENT ON FUNCTION fraps.import_frametimes IS 'Import *frametimes.csv generated
 -- Remove data:
 -- TRUNCATE fraps.frametimes;
 -- DELETE FROM fraps.dataset;
+
+DROP VIEW IF EXISTS fraps.dataset_view;
+CREATE VIEW fraps.dataset_view AS 
+SELECT id
+     , filepath
+     , regexp_replace(filepath, '.*[\\/]([^ ]+).*$', '\1') AS exe
+     , to_timestamp(
+	       regexp_replace(
+			   filepath, 
+			   '.*(\d\d\d\d-\d\d-\d\d \d\d-\d\d-\d\d-\d\d).*', 
+			   '\1'
+	       ), 
+		   'YYYY-MM-DD HH24-MI-SS-MS'
+	   ) AS t0
+  FROM fraps.dataset
+;
+
+
+DROP FUNCTION fraps.fps(bigint);
+ CREATE OR REPLACE FUNCTION fraps.fps (p_id bigint)
+RETURNS TABLE (
+    second bigint,
+    fps bigint
+)
+AS
+$DEF$
+BEGIN
+
+RETURN QUERY
+  WITH dataset AS (
+           SELECT *
+             FROM fraps.dataset_view dsv
+            WHERE dsv.id  = p_id
+       )
+     , frames AS (
+           SELECT *
+             FROM fraps.frames f
+             JOIN dataset ds
+               ON f.dataset_id = ds.id
+       )
+     , frames_meta AS (
+           SELECT min(t0) AS t0
+                , max(t_delta) AS t1
+             FROM frames
+       )
+     , bins AS (
+             WITH _bins AS (
+                       SELECT row_number() OVER () AS id
+                            , t.t
+                         FROM generate_series(
+                                  (SELECT t0 FROM frames_meta), 
+                                  (SELECT t0 FROM frames_meta) + (floor((SELECT t1 FROM frames_meta) / 1000) ||' seconds')::interval, 
+                                  INTERVAL '1000 milliseconds'
+                              ) AS t(t)
+                  )
+           SELECT l.id 
+                , l.t AS "t_i"
+                , r.t AS "t_(i+1)"
+             FROM _bins l
+             LEFT JOIN _bins r
+               ON l.id = r.id - 1
+            WHERE l.id < (SELECT max(id) FROM _bins)
+       )
+     , binned_frames AS (
+            SELECT fr.frame
+                 , bins.id AS bin
+              FROM (SELECT *
+                         , (SELECT t0 FROM frames_meta) + (t_delta || ' milliseconds')::interval AS t
+                      FROM frames) fr
+              JOIN bins 
+                ON fr.t >= bins."t_i"
+               AND fr.t < bins."t_(i+1)"
+       )
+SELECT bin
+     , count(*)
+  FROM binned_frames
+ GROUP BY bin
+ ORDER BY bin
+;
+
+END
+$DEF$
+LANGUAGE plpgsql
+;
