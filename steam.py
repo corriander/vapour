@@ -276,16 +276,32 @@ class Library(object):
 
     def _orphan_directories(self):
         # Return set of directories not accounted for in AppManifests
+        if os.name != 'nt':
+            # TODO: Improved method of detecting OS context. Libraries
+            #       might exist on Linux or Windows (or OSX...?) and
+            #       we might be running this from either.
+            #
+            # This method of checking is not necessarily valid for
+            # POSIX systems. AppManifests may contain case-insensitive
+            # paths and this is accomodated here.
+            raise NotImplementedError("POSIX not supported.")
+
         for root, dnames, fnames in os.walk(self.install_path):
-            fs_dname_set = set(dnames)
+            fs_dname_set_preserve_case = set(dnames)
+            fs_dname_set = set(map(str.lower, dnames))
             break	# We only care about the directories in root.
 
         am_dname_set = set(
-            os.path.basename(game.install_path)
+            str.lower(os.path.basename(game.install_path))
             for game in self.games.values()
         )
 
-        return fs_dname_set.difference(am_dname_set)
+        return set(
+            dname
+            for dname in fs_dname_set_preserve_case
+            if dname.lower() in fs_dname_set.difference(am_dname_set)
+        )
+
 
     def remove(self, appmanifest, force=False):
         """Remove the game associated with this appmanifest.
