@@ -34,6 +34,7 @@ import re
 import glob
 import psutil
 import shutil
+import warnings
 import winreg
 
 import vdf
@@ -133,7 +134,7 @@ class AppManifest(object):
         )
         os.remove(archived_manifest_path)
 
-    def move(self, dst, force=False):
+    def move(self, dst, force=False, fast=False):
         """Move game data to a new library."""
         # TODO: Introduce a fast version of this that doesn't copy
         #       if on same filesystem.
@@ -153,14 +154,30 @@ class AppManifest(object):
         msg = "Non-relative installdir in appmanifest."
         assert len(split_path) == 1, msg
 
+        if fast:
+            if not same_partition(self.install_path,
+                                  dst.install_path):
+                # It'll be copied anyway.
+                msg = ("Fast move not possible between partitions; "
+                       "ignoring `fast=True`")
+                warnings.warn(msg)
+                fast = False
+
         new_path = self._copy_manifest(dst)
         try:
-            self._copy_install_files(dst)
+            if fast:
+                self._move_install_files(dst)
+            else:
+                # Copy the installation directory.
+                self._copy_install_files(dst)
         except:
             os.remove(new_path)
             raise IOError("Move failed.")
+
         os.remove(self.path)
-        shutil.rmtree(self.install_path)
+        if not fast:
+            # We copied; safe to remove the source.
+            shutil.rmtree(self.install_path)
 
     def _copy_manifest(self, lib):
         src = self.path
@@ -174,6 +191,12 @@ class AppManifest(object):
         dst = os.path.join(lib.install_path,
                            os.path.basename(self.install_path))
         shutil.copytree(src, dst)
+
+    def _move_install_files(self, lib):
+        src = self.install_path
+        dst = os.path.join(lib.install_path,
+                           os.path.basename(self.install_path))
+        shutil.move(src, dst)
 
 
 class Library(object):
@@ -392,6 +415,28 @@ def get_libraries():
         i += 1
 
     return list(map(Library, lib_paths))
+
+
+def same_partition(path1, path2):
+    """Determine whether two paths are on the same partition.
+
+    This compares the path structure to see whether they have a common
+    root. No doubt some weirdness of application will break this.
+    """
+
+    if os.name != 'nt':
+        # TODO: See Library._orphan_directories TODO.
+        raise NotImplementedError("Algorithm not implemented.")
+
+    common_prefix = os.path.commonprefix(list(map(
+        os.path.normpath,
+        map(str.lower, [path1, path2])
+    )))
+
+    if common_prefix:
+        return True
+    else:
+        return False
 
 
 def get_steam_path():
