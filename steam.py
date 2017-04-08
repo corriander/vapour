@@ -208,14 +208,6 @@ class Library(object):
     def get_manifests(self):
         return list(map(AppManifest, glob.glob(self._acf_glob)))
 
-    def faulty_games(self):
-        path = self.install_path
-        return {
-            appmanifest.name: appmanifest
-            for appmanifest in self.games.values()
-            if not appmanifest.install_path.startswith(path)
-        }
-
     def as_table(self, sort_by=('name.lower',), fmt='human'):
 
         def sort_key(_manifest):
@@ -265,12 +257,20 @@ class Library(object):
                 AppManifest. The best way to fix this is install the
                 game in Steam to this library and let it discover
                 existing data.
+
+            dangling-manifests
+            :	contains list of manifests where the directory is not
+                present in this library.
         """
         issues_dict = {}
 
         issues_dict['orphan-dirs'] = list(sorted(
             self._orphan_directories()
         ))
+
+        issues_dict['dangling-manifests'] = list(
+            self._dangling_manifests()
+        )
 
         return issues_dict
 
@@ -302,6 +302,13 @@ class Library(object):
             if dname.lower() in fs_dname_set.difference(am_dname_set)
         )
 
+    def _dangling_manifests(self):
+        path = self.install_path
+        return set(
+            appmanifest
+            for appmanifest in self.games.values()
+            if not appmanifest.install_path.startswith(path)
+        )
 
     def remove(self, appmanifest, force=False):
         """Remove the game associated with this appmanifest.
