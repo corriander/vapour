@@ -340,13 +340,29 @@ class Archive(Library):
 
     @property
     def data_root(self):
-        return PATH_ARCHIVE
+        return os.path.normpath(PATH_ARCHIVE)
 
     @property
     def install_path(self):
         """Path of game install directories in Archive.
         """
         return self.data_root
+
+    def remove(self, appmanifest):
+        """Remove game data from archive."""
+
+        # Check we're actually looking at an archived appmanifest.
+        ampath = os.path.normpath(appmanifest.path)
+        common_prefix = os.path.commonprefix([ampath, self.data_root])
+        if common_prefix != self.data_root:
+            raise ValueError("AppManifest is not in archive.")
+
+        # Remove the AppManifest, followed by the archived installdir
+        os.remove(appmanifest.path)
+        shutil.rmtree(os.path.join(
+            self.data_root,
+            os.path.basename(appmanifest.install_path)
+        ))
 
     @staticmethod
     def restore(appmanifest, lib):
