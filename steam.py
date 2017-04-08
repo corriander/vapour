@@ -255,6 +255,38 @@ class Library(object):
         )
         return os.linesep.join(rows)
 
+    def issues(self):
+        """Summarise issues with the library.
+
+        Returns a dict where keys map to the following problems:
+
+            orphan-dirs
+            :   contains list of directories not present in an
+                AppManifest. The best way to fix this is install the
+                game in Steam to this library and let it discover
+                existing data.
+        """
+        issues_dict = {}
+
+        issues_dict['orphan-dirs'] = list(sorted(
+            self._orphan_directories()
+        ))
+
+        return issues_dict
+
+    def _orphan_directories(self):
+        # Return set of directories not accounted for in AppManifests
+        for root, dnames, fnames in os.walk(self.install_path):
+            fs_dname_set = set(dnames)
+            break	# We only care about the directories in root.
+
+        am_dname_set = set(
+            os.path.basename(game.install_path)
+            for game in self.games.values()
+        )
+
+        return fs_dname_set.difference(am_dname_set)
+
     def remove(self, appmanifest, force=False):
         """Remove the game associated with this appmanifest.
 
@@ -286,6 +318,12 @@ class Archive(Library):
     @property
     def data_root(self):
         return PATH_ARCHIVE
+
+    @property
+    def install_path(self):
+        """Path of game install directories in Archive.
+        """
+        return self.data_root
 
     @staticmethod
     def restore(appmanifest, lib):
