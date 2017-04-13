@@ -180,7 +180,7 @@ BEGIN
 	CREATE TEMPORARY TABLE pg_temp._import (LIKE gpuz.sensor);
 
 	EXECUTE format(
-        $$COPY pg_temp._import FROM '%s' DELIMITER ',' CSV;$$,
+        $$COPY pg_temp._import FROM '%s' DELIMITER AS ',' NULL AS '-' CSV;$$,
         p_path
     );
 
