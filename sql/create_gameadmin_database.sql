@@ -196,3 +196,18 @@ $DEF$
 language plpgsql;
 
 -- SELECT gpuz.import_sensor('L:\data\gpuz\sensor.log.csv');
+
+
+
+-- In-situ data post-processing
+-- ----------------------------
+CREATE MATERIALIZED VIEW public.gpuz_data AS 
+  WITH differenced AS (
+          SELECT *
+               , (t - (lag(t, 1) OVER (ORDER BY t ASC))) AS t_delta
+            FROM gpuz.sensor
+       )
+SELECT *
+     , sum(CASE WHEN extract('epoch' FROM t_delta) < 30 THEN 0 ELSE 1 END) OVER (ORDER BY t) AS session_id
+  FROM differenced
+;
