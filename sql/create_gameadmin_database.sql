@@ -70,20 +70,36 @@ COMMENT ON FUNCTION fraps.import_frames(varchar(260)) IS 'Import *frametimes.csv
 -- TRUNCATE fraps.frametimes;
 -- DELETE FROM fraps.dataset;
 
+-- XXX: Consider making this a MAT. VIEW
 DROP VIEW IF EXISTS fraps.dataset_view;
 CREATE VIEW fraps.dataset_view AS
-SELECT id
-     , filepath
-     , regexp_replace(filepath, '.*[\\/]([^ ]+).*$', '\1') AS exe
-     , to_timestamp(
-	       regexp_replace(
-			   filepath,
-			   '.*(\d\d\d\d-\d\d-\d\d \d\d-\d\d-\d\d-\d\d).*',
-			   '\1'
-	       ),
-		   'YYYY-MM-DD HH24-MI-SS-MS'
-	   ) AS t0
-  FROM fraps.dataset
+  WITH dataset_parsed AS (
+           SELECT id
+                , filepath
+                , regexp_replace(filepath, '.*[\\/]([^ ]+).*$', '\1') AS exe
+                , to_timestamp(
+                     regexp_replace(
+                         filepath,
+                         '.*(\d\d\d\d-\d\d-\d\d \d\d-\d\d-\d\d-\d\d).*',
+                         '\1'
+                     ),
+                     'YYYY-MM-DD HH24-MI-SS-MS'
+                ) AS t0
+             FROM fraps.dataset
+       )
+     , dataset_duration AS (
+           SELECT ds.id
+                , max(t_delta) * INTERVAL '1 millisecond' AS dt
+             FROM fraps.frames fr
+             JOIN dataset_parsed ds
+               ON ds.id = fr.dataset_id
+            GROUP BY ds.id
+       )
+SELECT t.*
+     , t.t0 + dt AS tn
+  FROM dataset_duration 
+  JOIN dataset_parsed t
+ USING (id)
 ;
 
 
