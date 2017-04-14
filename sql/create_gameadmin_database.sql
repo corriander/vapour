@@ -114,53 +114,16 @@ $DEF$
 BEGIN
 
 RETURN QUERY
-  WITH dataset AS (
-           SELECT *
-             FROM fraps.dataset_view dsv
-            WHERE dsv.id  = p_id
-       )
-     , frames AS (
-           SELECT *
-             FROM fraps.frames f
-             JOIN dataset ds
-               ON f.dataset_id = ds.id
-       )
-     , frames_meta AS (
-           SELECT min(t0) AS t0
-                , max(t_delta) AS t1
-             FROM frames
-       )
-     , bins AS (
-             WITH _bins AS (
-                       SELECT row_number() OVER () AS id
-                            , t.t
-                         FROM generate_series(
-                                  (SELECT t0 FROM frames_meta),
-                                  (SELECT t0 FROM frames_meta) + (floor((SELECT t1 FROM frames_meta) / 1000) ||' seconds')::interval,
-                                  INTERVAL '1000 milliseconds'
-                              ) AS t(t)
-                  )
-           SELECT l.id
-                , l.t AS "t_i"
-                , r.t AS "t_(i+1)"
-             FROM _bins l
-             LEFT JOIN _bins r
-               ON l.id = r.id - 1
-            WHERE l.id < (SELECT max(id) FROM _bins)
-       )
-     , binned_frames AS (
-            SELECT fr.frame
-                 , bins.id AS bin
-              FROM (SELECT *
-                         , (SELECT t0 FROM frames_meta) + (t_delta || ' milliseconds')::interval AS t
-                      FROM frames) fr
-              JOIN bins
-                ON fr.t >= bins."t_i"
-               AND fr.t < bins."t_(i+1)"
+  WITH binned_frames AS (
+           SELECT div(t_delta::integer, 1000)::bigint AS bin
+                , *
+             FROM fraps.frames
+            WHERE dataset_id = p_id
        )
 SELECT bin
      , count(*)
   FROM binned_frames
+ WHERE bin != (SELECT max(bin) FROM binned_frames) -- last bin always partial by definition.
  GROUP BY bin
  ORDER BY bin
 ;
