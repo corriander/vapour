@@ -37,3 +37,22 @@ Pre-process and import the sensor log:
 
 	gameadmin-# SELECT gpuz.import_sensor('C:\Path\to\sensor.log.csv');
 
+
+Notes
+-----
+
+The following links have information about parsing (binary) performance
+monitor log files (`*.blg`):
+
+  - <http://stackoverflow.com/a/6248264>
+  - <http://blog.bennett-scharf.com/2008/12/17/converting-an-existing-perfmon-blg-file-to-csv/>
+
+The gist is that you can convert existing log files with **relog**
+and it might be worth considering **logman** for the future as it is
+capable of spooling off a format of your choice removing this
+conversion step.
+
+It's also worth noting that The Scripting Guys detail how to use
+PowerShell to generate performance logs:
+
+  - <https://blogs.technet.microsoft.com/heyscriptingguy/2011/07/29/create-and-parse-performance-monitor-logs-with-powershell/>
