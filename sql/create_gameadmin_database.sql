@@ -151,6 +151,7 @@ CREATE TABLE gpuz.sensor (
 );
 
 COMMENT ON TABLE gpuz.sensor IS 'Frequencies (f_*) are [MHz], Temperature [degC], Mem. usage in [MiB], VDDC in [V]. The rest are [%].';
+
 CREATE OR REPLACE FUNCTION gpuz.import_sensor (p_path varchar(260))
 RETURNS void
 AS
