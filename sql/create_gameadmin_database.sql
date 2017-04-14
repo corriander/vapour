@@ -70,9 +70,8 @@ COMMENT ON FUNCTION fraps.import_frames(varchar(260)) IS 'Import *frametimes.csv
 -- TRUNCATE fraps.frametimes;
 -- DELETE FROM fraps.dataset;
 
--- XXX: Consider making this a MAT. VIEW
-DROP VIEW IF EXISTS fraps.dataset_view;
-CREATE VIEW fraps.dataset_view AS
+DROP MATERIALIZED VIEW IF EXISTS fraps.dataset_view;
+CREATE MATERIALIZED VIEW fraps.dataset_view AS
   WITH dataset_parsed AS (
            SELECT id
                 , filepath
