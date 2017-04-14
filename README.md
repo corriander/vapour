@@ -21,12 +21,12 @@ Usage
 Used for grabbing FPS data. We only care about the frametimes.csv
 output as this contains everything we need to derive the rest.
 
+In Git Bash:
+
 	for f in *frametimes.csv
 	do 
-		echo "SELECT fraps.import_frames('$(pwd)/$f')"
-	done > psql -d gameadmin
-
-> The above is not tested; should be the gist of it though.
+		echo "SELECT fraps.import_frames('$(pwd)/$f');" | sed 's#^/\([a-zA-Z]\)#\1:#'
+	done | psql -d gameadmin
 
 
 #### GPU-Z
