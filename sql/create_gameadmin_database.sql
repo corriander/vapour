@@ -199,3 +199,44 @@ SELECT *
      , sum(CASE WHEN extract('epoch' FROM t_delta) < 30 THEN 0 ELSE 1 END) OVER (ORDER BY t) AS session_id
   FROM differenced
 ;
+
+CREATE SCHEMA perfmon;
+
+DROP TABLE IF EXISTS perfmon.proctime;
+CREATE TABLE perfmon.proctime (
+           t timestamp PRIMARY KEY NOT NULL,
+           core0 float DEFAULT NULL,
+           core1 float DEFAULT NULL,
+           core2 float DEFAULT NULL,
+           core3 float DEFAULT NULL
+       )
+;
+
+CREATE OR REPLACE FUNCTION perfmon.import_proctime(p_path varchar)
+RETURNS void
+AS
+$DEF$
+BEGIN
+
+       DROP TABLE IF EXISTS pg_temp._import_proctime;
+     CREATE TEMPORARY TABLE pg_temp._import_proctime (LIKE perfmon.proctime INCLUDING DEFAULTS);
+
+    EXECUTE format(
+                $$
+                COPY pg_temp._import_proctime
+                FROM '%s' DELIMITER ',' HEADER NULL AS '-' CSV;
+                $$,
+                p_path
+            );
+
+     INSERT INTO perfmon.proctime
+     SELECT *
+       FROM pg_temp._import_proctime
+      ORDER BY t
+         ON CONFLICT DO NOTHING
+;
+
+END
+$DEF$
+LANGUAGE plpgsql
+;
