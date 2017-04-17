@@ -87,7 +87,8 @@ CREATE MATERIALIZED VIEW fraps.dataset_view AS
                          '\1'
                      ),
                      'YYYY-MM-DD HH24-MI-SS-MS'
-                ) AS t0
+                  ) AS t0
+                , coalesce(notes, '')
              FROM fraps.dataset
        )
      , dataset_duration AS (
