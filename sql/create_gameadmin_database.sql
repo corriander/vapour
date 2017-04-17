@@ -101,7 +101,7 @@ CREATE MATERIALIZED VIEW fraps.dataset_view AS
        )
 SELECT t.*
      , t.t0 + dt AS tn
-  FROM dataset_duration 
+  FROM dataset_duration
   JOIN dataset_parsed t
  USING (id)
 ;
@@ -189,7 +189,7 @@ language plpgsql;
 
 -- In-situ data post-processing
 -- ----------------------------
-CREATE MATERIALIZED VIEW public.gpuz_data AS 
+CREATE MATERIALIZED VIEW public.gpuz_data AS
   WITH differenced AS (
           SELECT *
                , (t - (lag(t, 1) OVER (ORDER BY t ASC))) AS t_delta
