@@ -176,6 +176,8 @@ BEGIN
 
     DROP TABLE pg_temp._import;
 
+    REFRESH MATERIALIZED VIEW public.gpuz_data;
+
 END
 $DEF$
 language plpgsql;
