@@ -56,6 +56,8 @@ BEGIN
          ON CONFLICT DO NOTHING
      ;
 
+     REFRESH MATERIALIZED VIEW fraps.dataset_view;
+
 END
 $DEF$
 LANGUAGE plpgsql
