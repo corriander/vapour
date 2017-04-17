@@ -6,9 +6,11 @@ CREATE SCHEMA fraps;
 
 CREATE TABLE fraps.dataset (
     id serial PRIMARY KEY NOT NULL,
-    filepath text UNIQUE NOT NULL
+    filepath text UNIQUE NOT NULL,
+    notes text
 );
 -- ALTER TABLE fraps.dataset ADD CONSTRAINT dataset_filepath_key UNIQUE (filepath);
+-- ALTER TABLE fraps.dataset ADD COLUMN notes text;
 
 DROP TABLE IF EXISTS fraps.frames;
 CREATE TABLE fraps.frames (
@@ -20,7 +22,7 @@ CREATE TABLE fraps.frames (
 
 COMMENT ON TABLE fraps.frames IS 'Each frame recorded by Fraps and the time delta (ms)';
 
-CREATE OR REPLACE FUNCTION fraps.import_frames (p_path varchar(260))
+CREATE OR REPLACE FUNCTION fraps.import_frames (p_path varchar(260), p_notes text DEFAULT NULL)
 RETURNS void
 AS
 $DEF$
@@ -39,8 +41,8 @@ BEGIN
             );
 
        WITH dataset_insert AS (
-                INSERT INTO fraps.dataset (filepath)
-                VALUES (p_path)
+                INSERT INTO fraps.dataset (filepath, notes)
+                VALUES (p_path, p_notes)
                 ON CONFLICT DO NOTHING
                 RETURNING id
             )
