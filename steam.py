@@ -365,6 +365,10 @@ class Library(object):
                                                          count,
                                                          size)
 
+    def __repr__(self):
+        return "<{}(path='{}')>".format(self.__class__.__name__,
+                                        self.path)
+
 
 class Archive(Library):
 
