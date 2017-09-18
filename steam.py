@@ -37,6 +37,7 @@ import shutil
 import warnings
 import winreg
 
+import humanize
 import vdf
 
 REGISTRY_KEY_STEAM = r'SOFTWARE\Valve\Steam'
@@ -354,6 +355,15 @@ class Library(object):
             if re.search(regex, name) is not None:
                 matches.append(manifest)
         return matches
+
+    def __str__(self):
+        # Simple string representation giving location and size.
+        drive = os.path.splitdrive(self.install_path)[0].upper()
+        count = len(self.games)
+        size = humanize.naturalsize(self.size)
+        return "Steam Library ({}, {} games, {})".format(drive,
+                                                         count,
+                                                         size)
 
 
 class Archive(Library):
