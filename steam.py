@@ -353,9 +353,8 @@ class Library(object):
         archive = Archive()
         if not force:
             abort_if_not_archived(appmanifest)
-        else:
-            os.remove(appmanifest.path)
-            shutil.rmtree(appmanifest.install_path)
+        os.remove(appmanifest.path)
+        shutil.rmtree(appmanifest.install_path)
 
     def select(self, regex):
         matches = []
