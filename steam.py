@@ -334,6 +334,14 @@ class Library(object):
             if not appmanifest.install_path.startswith(path)
         )
 
+    def contains(self, regex):
+        """Test whether the library contains a game matching regex.
+        """
+        if self.select(regex):
+            return True
+        else:
+            return False
+
     def remove(self, appmanifest, force=False):
         """Remove the game associated with this appmanifest.
 
