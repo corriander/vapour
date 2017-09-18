@@ -36,6 +36,7 @@ import psutil
 import shutil
 import warnings
 import winreg
+import wmi
 
 import humanize
 import vdf
@@ -206,6 +207,13 @@ class Library(object):
         self.path = os.path.normpath(os.path.expanduser(path))
 
     @property
+    def free(self):
+        """Free disk space available to this library."""
+        for disk in wmi.WMI().Win32_LogicalDisk():
+            if self.__get_drive_caption() == disk.caption:
+                return humanize.naturalsize(disk.FreeSpace)
+
+    @property
     def install_path(self):
         return os.path.join(self.data_root, 'common')
 
@@ -363,9 +371,12 @@ class Library(object):
                 matches.append(manifest)
         return matches
 
+    def __get_drive_caption(self):
+        return os.path.splitdrive(self.install_path)[0].upper()
+
     def __str__(self):
         # Simple string representation giving location and size.
-        drive = os.path.splitdrive(self.install_path)[0].upper()
+        drive = self.__get_drive_caption()
         count = len(self.games)
         size = humanize.naturalsize(self.size)
         return "Steam Library ({}, {} games, {})".format(drive,
