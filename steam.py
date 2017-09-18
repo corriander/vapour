@@ -215,18 +215,28 @@ class Library(object):
 
     @property
     def install_path(self):
+        """Location of game data."""
         return os.path.join(self.data_root, 'common')
 
     @property
     def size(self):
+        """Total registed size of library.
+
+        Warning: This may differ from actual size as this is a summary
+        of all sizes in the game manifests, not the actual data in the
+        disk. For example, if a manifest is deleted, the game data
+        will still be there.
+        """
         return sum(am.size for am in self.get_manifests())
 
     @property
     def games(self):
+        """Dictionary of games keyed by name."""
         return {am.name: am for am in self.get_manifests()}
 
     @property
     def data_root(self):
+        """Contains manifests (and game data in a nested directory)."""
         return os.path.join(self.path, 'steamapps')
 
     @property
@@ -238,10 +248,20 @@ class Library(object):
     archive.__doc__ = AppManifest.archive.__doc__
 
     def get_manifests(self):
+        """Return a list of manifests found in the data_root."""
         return list(map(AppManifest, glob.glob(self._acf_glob)))
 
     def as_table(self, sort_by=('name.lower',), fmt='human'):
+        """Summarise library as a table.
 
+            sort_by: sequence of strings
+                Specifies the attribute of a game to sort by.
+                'name.lower' and 'size.desc' are special cases for
+                normalised name sorting and largest to smallest.
+
+            fmt: string in set {'human',}
+                Defines the format of the table contents.
+        """
         def sort_key(_manifest):
             values = []
             for attr in sort_by:
