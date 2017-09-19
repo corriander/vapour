@@ -209,6 +209,12 @@ class AppManifest(object):
                            os.path.basename(self.install_path))
         shutil.move(src, dst)
 
+    def __hash__(self):
+        return hash((self.path, str(sorted(self._metadata))))
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
 
 class Library(object):
 
@@ -467,6 +473,23 @@ class Archive(Library):
                            installdir)
         dst = os.path.join(lib.install_path, installdir)
         shutil.copytree(src, dst)
+
+    def _dangling_manifests(self):
+        # Differs from super implementation because install_path of
+        # AppManifest instances is meaningless here (flat storage).
+        path = self.install_path
+        amset = set()
+        for am in self.games.values():
+            # Install path has an extra level outside of the archive.
+            # NOTE: In hindsight, this is probably a mistake!
+            split_path = os.path.split(am.install_path)
+            fixed_path = os.path.join(os.path.dirname(split_path[0]),
+                                      split_path[1])
+
+            if not os.path.exists(fixed_path):
+                amset.add(am)
+
+        return amset
 
 
 def get_libraries():
