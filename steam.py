@@ -136,6 +136,15 @@ class AppManifest(object):
         )
         os.remove(archived_manifest_path)
 
+    def inspect_size(self):
+        """Inspect the size of the game installation.
+
+        This can be useful detecting discrepancies between the size
+        reported by the app manifest and the real size on disk (e.g.
+        missing or extra data).
+        """
+        return get_directory_size(self.install_path)
+
     def move(self, dst, force=False, fast=False):
         """Move game data to a new library."""
         # TODO: Introduce a fast version of this that doesn't copy
@@ -298,6 +307,15 @@ class Library(object):
             '{:>50s} | {:8.2f} |'.format('TOTAL', self.size / 1024**3)
         )
         return os.linesep.join(rows)
+
+    def inspect_size(self):
+        """Inspect the size of the library directory.
+
+        This is useful for identifying discrepancies between the size
+        reported by app manifests (available via `size` property) and
+        the real on-disk size.
+        """
+        return get_directory_size(self.install_path)
 
     def issues(self):
         """Summarise issues with the library.
@@ -502,6 +520,16 @@ def get_steam_path():
                                          REGISTRY_KEY_STEAMPATH)
     return os.path.normpath(value_typeflag[0])
 
+def get_directory_size(path):
+    # Probably not the fastest implementation:
+    #  - https://stackoverflow.com/q/1987119
+    #  - https://stackoverflow.com/q/2485719
+    dir_size = 0
+    for root, dirs, files in os.walk(path):
+        for basename in files:
+            path = os.path.join(root, basename)
+            dir_size += os.path.getsize(path)
+    return dir_size
 
 def abort_if_not_archived(appmanifest):
     # TODO: This is begging to be a decorator.
