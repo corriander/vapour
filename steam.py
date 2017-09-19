@@ -666,6 +666,10 @@ def get_directory_size(path):
             dir_size += os.path.getsize(path)
     return dir_size
 
+def locate_game(regex):
+    libs = get_libraries()
+    return [lib for lib in libs if lib.select(regex)]
+
 def abort_if_not_archived(appmanifest):
     # TODO: This is begging to be a decorator.
     archive = Archive()
