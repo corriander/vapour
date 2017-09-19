@@ -34,6 +34,7 @@ import re
 import glob
 import psutil
 import shutil
+import textwrap
 import warnings
 import winreg
 import wmi
@@ -360,6 +361,83 @@ class Library(object):
 
         return issues_dict
 
+    def issues_report(self):
+        """Human-readable report of issues with the library."""
+
+        lines = []
+
+        issues_dict = self.issues()
+
+        if issues_dict['orphan-dirs']:
+            blurb = """
+            Orphaned Game Data
+            ------------------
+
+            The following game directories exist but Steam doesn't
+            appear to know about them:
+            """
+            lines.append(textwrap.dedent(blurb))
+            for d in issues_dict['orphan-dirs']:
+                size = humanize.naturalsize(
+                    get_directory_size(
+                        os.path.join(self.install_path,
+                                     d)
+                    )
+                )
+                lines.append('  - {} ({})'.format(d, size))
+
+        if issues_dict['dangling-manifests']:
+            blurb = """
+            Dangling Manifests
+            ------------------
+
+            The following games are registered by Steam, but there
+            doesn't appear to be any game data present:
+            """
+            lines.append(textwrap.dedent(blurb))
+            for am in issues_dict['dangling-manifests']:
+                lines.append('  - {} (id: {})'.format(am.name, am.id))
+
+        if issues_dict['size-discrepancy']:
+            def hr_delta(delta):
+                if delta < 0:
+                    relative = "bigger"
+                elif delta > 0:
+                    relative = "smaller"
+                delta = humanize.naturalsize(abs(delta))
+                return "{} {}".format(delta, relative)
+
+            header = """
+            Size Discrepancies
+            ------------------
+
+            Library is {} than Steam thinks it is.
+            """
+
+            lib_delta = issues_dict['size-discrepancy'].pop('lib')
+            if lib_delta:
+                lines.append(
+                    textwrap.dedent(header.format(hr_delta(lib_delta)))
+                )
+
+                if issues_dict['size-discrepancy']:
+                    lines.append(textwrap.dedent("""
+                        The following games are known about by Steam,
+                        but there appears to be a difference in size
+                        between what it thinks and what there really
+                        is:
+                    """))
+
+                for game, delta in issues_dict['size-discrepancy'].items():
+                    lines.append(
+                        "  - {} ({} on disk)".format(
+                            game,
+                            hr_delta(delta)
+                        )
+                    )
+
+        return '\n'.join(lines)
+
     def _orphan_directories(self):
         # Return set of directories not accounted for in AppManifests
         if os.name != 'nt':
@@ -464,6 +542,10 @@ class Archive(Library):
         """Path of game install directories in Archive.
         """
         return self.data_root
+
+    def issues_report(self):
+        string = super().issues_report()
+        return string.replace('Steam', '<Archive>')
 
     def remove(self, appmanifest):
         """Remove game data from archive."""
