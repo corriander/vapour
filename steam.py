@@ -348,6 +348,16 @@ class Library(object):
             self._dangling_manifests()
         )
 
+        issues_dict['size-discrepancy'] = self._size_discrepancies()
+
+        # Don't bother reporting on duplicates.
+        d = issues_dict['size-discrepancy'].copy()
+        for game in d:
+            if game == 'lib':
+                continue
+            if self.games[game] in issues_dict['dangling-manifests']:
+                issues_dict['size-discrepancy'].pop(game)
+
         return issues_dict
 
     def _orphan_directories(self):
@@ -385,6 +395,14 @@ class Library(object):
             for appmanifest in self.games.values()
             if not os.path.exists(appmanifest.install_path)
         )
+
+    def _size_discrepancies(self):
+        d = {'lib': self.size - self.inspect_size()}
+        for game, am in self.games.items():
+            delta = am.size - am.inspect_size()
+            if delta != 0:
+                d[game] = delta
+        return d
 
     def contains(self, regex):
         """Test whether the library contains a game matching regex.
@@ -480,16 +498,28 @@ class Archive(Library):
         path = self.install_path
         amset = set()
         for am in self.games.values():
-            # Install path has an extra level outside of the archive.
-            # NOTE: In hindsight, this is probably a mistake!
-            split_path = os.path.split(am.install_path)
-            fixed_path = os.path.join(os.path.dirname(split_path[0]),
-                                      split_path[1])
-
+            fixed_path = self.__fix_manifest_install_path(am)
             if not os.path.exists(fixed_path):
                 amset.add(am)
 
         return amset
+
+    def _size_discrepancies(self):
+        d = {'lib': self.size - self.inspect_size()}
+        for game, am in self.games.items():
+            fixed_path = self.__fix_manifest_install_path(am)
+            inspected_size = get_directory_size(fixed_path)
+            delta = am.size - inspected_size
+            if delta != 0:
+                d[game] = delta
+        return d
+
+    def __fix_manifest_install_path(self, appmanifest):
+        # Install path has an extra level outside of the archive.
+        # NOTE: In hindsight, this is probably a mistake!
+        split_path = os.path.split(appmanifest.install_path)
+        return os.path.join(os.path.dirname(split_path[0]),
+                            split_path[1])
 
 
 def get_libraries():
