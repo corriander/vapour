@@ -377,7 +377,7 @@ class Library(object):
         return set(
             appmanifest
             for appmanifest in self.games.values()
-            if not appmanifest.install_path.startswith(path)
+            if not os.path.exists(appmanifest.install_path)
         )
 
     def contains(self, regex):
