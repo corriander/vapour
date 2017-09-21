@@ -214,7 +214,7 @@ class AppManifest(object):
         return hash((self.path, str(sorted(self._metadata))))
 
     def __eq__(self, other):
-        return self.__dict__ == other.__dict__
+        return self._metadata == other._metadata
 
 
 class Library(object):
