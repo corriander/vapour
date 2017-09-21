@@ -243,7 +243,7 @@ class Library(object):
         disk. For example, if a manifest is deleted, the game data
         will still be there.
         """
-        return sum(am.size for am in self.get_manifests())
+        return sum(am.size for am in self.games.values())
 
     @property
     def games(self):
