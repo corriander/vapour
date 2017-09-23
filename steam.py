@@ -55,8 +55,9 @@ FILENAME_LIBRARY_FOLDERS = 'steamapps/libraryfolders.vdf'
 class AppManifest(object):
     """Encapsulation of metadata in appmanifest ACF."""
 
-    def __init__(self, path):
+    def __init__(self, path, lib=None):
         self.path = path
+        self.lib = lib
         with open(path, 'r') as f:
             self._metadata = vdf.load(f)
 
@@ -81,7 +82,10 @@ class AppManifest(object):
 
     @property
     def install_path(self):
-        root_dir = os.path.join(os.path.dirname(self.path), 'common')
+        if self.lib is None or not isinstance(self.lib, Archive):
+            root_dir = os.path.join(os.path.dirname(self.path), 'common')
+        else:
+            root_dir = os.path.join(os.path.dirname(self.path))
         return os.path.join(root_dir, self._installdir)
 
     @property
@@ -578,35 +582,6 @@ class Archive(Library):
                            installdir)
         dst = os.path.join(lib.install_path, installdir)
         shutil.copytree(src, dst)
-
-    def _dangling_manifests(self):
-        # Differs from super implementation because install_path of
-        # AppManifest instances is meaningless here (flat storage).
-        path = self.install_path
-        amset = set()
-        for am in self.games.values():
-            fixed_path = self.__fix_manifest_install_path(am)
-            if not os.path.exists(fixed_path):
-                amset.add(am)
-
-        return amset
-
-    def _size_discrepancies(self):
-        d = {'lib': self.size - self.inspect_size()}
-        for game, am in self.games.items():
-            fixed_path = self.__fix_manifest_install_path(am)
-            inspected_size = get_directory_size(fixed_path)
-            delta = am.size - inspected_size
-            if delta != 0:
-                d[game] = delta
-        return d
-
-    def __fix_manifest_install_path(self, appmanifest):
-        # Install path has an extra level outside of the archive.
-        # NOTE: In hindsight, this is probably a mistake!
-        split_path = os.path.split(appmanifest.install_path)
-        return os.path.join(os.path.dirname(split_path[0]),
-                            split_path[1])
 
 
 def get_libraries():
