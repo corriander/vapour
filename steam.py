@@ -191,6 +191,11 @@ class AppManifest(object):
             # We copied; safe to remove the source.
             shutil.rmtree(self.install_path)
 
+    def size_delta(self):
+        """Get the difference in size between the manifest and data.
+        """
+        return self.size - self.inspect_size()
+
     def _copy_manifest(self, lib):
         src = self.path
         dst = os.path.join(lib.path, 'steamapps',
