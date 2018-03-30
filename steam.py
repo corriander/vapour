@@ -383,12 +383,13 @@ class Library(object):
 
         return issues_dict
 
-    def issues_report(self):
+    def issues_report(self, issues_dict=None):
         """Human-readable report of issues with the library."""
 
         lines = []
 
-        issues_dict = self.issues()
+        if issues_dict is None:
+            issues_dict = self.issues()
 
         if issues_dict['orphan-dirs']:
             blurb = """
@@ -565,8 +566,47 @@ class Archive(Library):
         """
         return self.data_root
 
+    def get_archived_game_size(self, appmanifest):
+        fixed_path = self.__fix_manifest_install_path(appmanifest)
+        return get_directory_size(fixed_path)
+
+    def issues(self):
+        # Adds a redundant archive data check.
+        issues_dict = super().issues()
+
+        redundant_games = []
+        for name in self.games:
+            hits = locate_game(name)
+            redundant_games.extend(
+                [(lib.select(name)[0], lib) for lib in hits]
+            )
+
+        if redundant_games:
+            issues_dict['redundant-data'] = redundant_games
+
+        return issues_dict
+
     def issues_report(self):
+        issues_dict = self.issues()
         string = super().issues_report()
+
+        extra_lines = []
+
+        if issues_dict.get('redundant-data', ()):
+            blurb = """
+            Redundant Data
+            --------------
+
+            The following games are archived, but are also installed
+            in one or more game library:
+            """
+            extra_lines.append(textwrap.dedent(blurb))
+            for am, lib in issues_dict['redundant-data']:
+                extra_lines.append(
+                    '  - {} (id: {}; lib: {})'.format(am.name, am.id, lib)
+                )
+
+        string = '\n'.join([string] + extra_lines)
         return string.replace('Steam', '<Archive>')
 
     def remove(self, appmanifest=None, pattern=None):
