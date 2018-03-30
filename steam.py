@@ -347,6 +347,10 @@ class Library(object):
             dangling-manifests
             :	contains list of manifests where the directory is not
                 present in this library.
+
+            size-discrepancy
+            :   contains any identified size discrepancies between
+                metadata and size on disk.
         """
         issues_dict = {}
 
@@ -432,9 +436,9 @@ class Library(object):
                 if issues_dict['size-discrepancy']:
                     lines.append(textwrap.dedent("""
                         The following games are known about by Steam,
-                        but there appears to be a difference in size
-                        between what it thinks and what there really
-                        is:
+                        but there appears to be a significant
+                        difference in size between the content of the
+                        app manifest and the size on disk (>0.1%):
                     """))
 
                 for game, delta in issues_dict['size-discrepancy'].items():
@@ -486,8 +490,8 @@ class Library(object):
     def _size_discrepancies(self):
         d = {'lib': self.size - self.inspect_size()}
         for game, am in self.games.items():
-            delta = am.size - am.inspect_size()
-            if delta != 0:
+            delta = am.size_delta()
+            if delta != 0 and delta / float(am.size) > 0.001:
                 d[game] = delta
         return d
 
