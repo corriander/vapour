@@ -280,7 +280,10 @@ class Library(object):
 
     def get_manifests(self):
         """Return a list of manifests found in the data_root."""
-        return list(map(AppManifest, glob.glob(self._acf_glob)))
+        manifests = []
+        for path in glob.glob(self._acf_glob):
+            manifests.append(AppManifest(path, lib=self))
+        return manifests
 
     def as_table(self, sort_by=('name.lower',), fmt='human'):
         """Summarise library as a table.
