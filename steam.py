@@ -427,8 +427,15 @@ class Library(object):
                     relative = "bigger"
                 elif delta > 0:
                     relative = "smaller"
-                delta = humanize.naturalsize(abs(delta))
-                return "{} {}".format(delta, relative)
+                elif math.isnan(delta):
+                    relative = "unknown"
+
+                if relative != "unknown":
+                    delta = humanize.naturalsize(abs(delta))
+                    return "{} {}".format(delta, relative)
+
+                else:
+                    return "unknown; only have size"
 
             header = """
             Size Discrepancies
@@ -501,7 +508,9 @@ class Library(object):
         d = {'lib': self.size - self.inspect_size()}
         for game, am in self.games.items():
             delta = am.size_delta()
-            if delta != 0 and delta / float(am.size) > 0.001:
+            if not am.size:
+                d[game] = math.nan
+            elif delta != 0 and delta / float(am.size) > 0.001:
                 d[game] = delta
         return d
 
