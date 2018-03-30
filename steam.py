@@ -32,6 +32,7 @@ See also:
 import os
 import re
 import glob
+import math
 import psutil
 import shutil
 import textwrap
@@ -194,6 +195,11 @@ class AppManifest(object):
         if not fast:
             # We copied; safe to remove the source.
             shutil.rmtree(self.install_path)
+
+    def remove(self):
+        """Remove app manifest and data from the associated library.
+        """
+        self.lib.remove(self)
 
     def size_delta(self):
         """Get the difference in size between the manifest and data.
@@ -560,21 +566,71 @@ class Archive(Library):
         string = super().issues_report()
         return string.replace('Steam', '<Archive>')
 
-    def remove(self, appmanifest):
-        """Remove game data from archive."""
+    def remove(self, appmanifest=None, pattern=None):
+        """Remove games from archive.
 
-        # Check we're actually looking at an archived appmanifest.
-        ampath = os.path.normpath(appmanifest.path)
-        common_prefix = os.path.commonprefix([ampath, self.data_root])
-        if common_prefix != self.data_root:
-            raise ValueError("AppManifest is not in archive.")
+        A single game may be specified by appmanifest, and/or games
+        matching the pattern.
 
-        # Remove the AppManifest, followed by the archived installdir
-        os.remove(appmanifest.path)
-        shutil.rmtree(os.path.join(
-            self.data_root,
-            os.path.basename(appmanifest.install_path)
-        ))
+            appmanifest: AppManifest
+                An app manifest present in the archive. If the
+                appmanifest is not in the archive, the remove
+                operation is aborted.
+
+            pattern: str
+                A .select() compatible expression for selecting games
+                by name.
+        """
+        if all(arg is None for arg in (appmanifest, pattern)):
+            raise TypeError("Either appmanifest or pattern "
+                            "must have a meaningful value.")
+
+        appmanifests_to_remove = []
+
+        # Handle the single appmanifest
+        if appmanifest is not None:
+            # Check we're actually looking at an archived appmanifest.
+            common_prefix = os.path.commonprefix(
+                [appmanifest.install_path, self.data_root]
+            )
+            if common_prefix != self.data_root:
+                raise ValueError("AppManifest is not in archive.")
+            appmanifests_to_remove.append(appmanifest)
+
+        # Handle patterns
+        if pattern is not None:
+            appmanifests_to_remove.extend(self.select(pattern))
+            if not appmanifests_to_remove:
+                # We obviously didn't get an explicit AppManifest and
+                # nothing was returned by select.
+                print("No matching app manifests to remove.")
+                return
+
+        # Prompt before removal (we must have 1+ at this point).
+        prompt_lines = ["The following will be removed:\n"]
+        for am in appmanifests_to_remove:
+            prompt_lines.append("\t{}".format(am.name))
+        prompt_lines.append("\nProceed with removal (Y)? ")
+        ans = input('\n'.join(prompt_lines))
+        if ans != 'Y':
+            print("Removal aborted.")
+            return
+
+        # Proveed with the removal.
+        for am in appmanifests_to_remove:
+            # Remove the AppManifest, followed by the data
+            os.remove(am.path)
+            try:
+                shutil.rmtree(os.path.join(
+                    self.data_root,
+                    os.path.basename(am.install_path)
+                ))
+            except FileNotFoundError:
+                # Dangling manifest
+                print("{} dangling manifest has been "
+                      "removed.".format(am.name))
+                continue
+            print("{} has been removed.".format(am.name))
 
     @staticmethod
     def restore(appmanifest, lib):
@@ -587,7 +643,11 @@ class Archive(Library):
         dst = os.path.join(lib.install_path, installdir)
         shutil.copytree(src, dst)
 
-
+# --------------------------------------------------------------------
+#
+# Functions
+#
+# --------------------------------------------------------------------
 def get_libraries():
     """Steam library factory."""
     lib_paths = [get_steam_path()]
@@ -638,6 +698,7 @@ def get_steam_path():
     value_typeflag = winreg.QueryValueEx(steam_key,
                                          REGISTRY_KEY_STEAMPATH)
     return os.path.normpath(value_typeflag[0])
+
 
 def get_directory_size(path):
     # Probably not the fastest implementation:
