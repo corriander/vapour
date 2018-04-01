@@ -576,8 +576,7 @@ class Archive(Library):
         return self.data_root
 
     def get_archived_game_size(self, appmanifest):
-        fixed_path = self.__fix_manifest_install_path(appmanifest)
-        return get_directory_size(fixed_path)
+        return get_directory_size(appmanifest.archive_path)
 
     def issues(self):
         # Adds a redundant archive data check.
@@ -763,15 +762,27 @@ def get_directory_size(path):
             dir_size += os.path.getsize(path)
     return dir_size
 
+
 def locate_game(regex):
     libs = get_libraries()
     return [lib for lib in libs if lib.select(regex)]
 
+
 def abort_if_not_archived(appmanifest):
     # TODO: This is begging to be a decorator.
     archive = Archive()
-    if appmanifest.name not in archive.games.keys():
+    game = appmanifest.name
+    if game not in archive.games:
         raise RuntimeError("Game is not archived; aborting!")
+
+    archived = archive.select(game)[0]
+
+    size_delta = (appmanifest.inspect_size() -
+                  archive.get_archived_game_size(archived))
+
+    if appmanifest != archived or size_delta:
+        # TODO: Consider going deeper to inspect how...
+        raise RuntimeError("Archived game differs; aborting!")
 
 
 def abort_if_steam_is_running():
