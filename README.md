@@ -3,7 +3,7 @@ more of an organised manner.
 
 Contains the following:
 
-  - Python Module for interacting with Steam libraries/games so far.
+  - Python package for interacting with Steam libraries/games.
   - PostgreSQL DDL for scraping performance data.
 
 Note: There's nothing in the master branch yet because it's only been
@@ -13,6 +13,34 @@ with this.
 
 Usage
 -----
+
+### Library Management
+
+Archiving and removing a game from the steam library to make space for
+another without the need to re-download:
+
+	conda activate gameadmin
+	python
+	>>> from gameadmin import steam
+	>>> libs = steam.libs
+	>>> print(libs[0].as_table())
+	>>> game = libs[0].select('MyGame')
+	>>> game.archive()
+	>>> game.remove()
+
+
+#### Configuration
+
+Add a `settings.json` to `~/AppData/Local/gameadmin` or
+`~/.config/gameadmin` in Linux containing something like:
+
+	{
+		"collections": {
+			"archives": [
+				"/path/to/archive/dir"
+			]
+		}
+	}
 
 ### PostgreSQL Storage
 
