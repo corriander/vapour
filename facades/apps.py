@@ -1,5 +1,4 @@
 """Facades for interacting with Programs"""
-import json
 import subprocess
 import os
 from abc import ABC, abstractmethod
@@ -7,20 +6,12 @@ from enum import Enum
 
 import psutil # NOTE: multi-platform but not used here for wsl
 
+from .config import Settings
 from .environment import Platform
 
 PLATFORM = Platform.detect()
 if PLATFORM == Platform.WINDOWS:
     import winreg
-
-    class XDG(object):
-        XDG_CONFIG_HOME = os.path.normpath(
-            os.path.expanduser('~/AppData/Local')
-        )
-    xdg = XDG
-
-else:
-    import xdg # Incompatibility with python versions used by WMI
 
 # --------------------------------------------------------------------
 # Operating System contexts
@@ -57,11 +48,7 @@ class WindowsContext(AbstractOperatingSystemContext):
 # --------------------------------------------------------------------
 class App(ABC):
 
-    USER_CONFIG_PATH = os.path.join(
-        xdg.XDG_CONFIG_HOME,
-        'gameadmin',
-        'apps.json'
-    )
+    settings = Settings()
 
     @property
     def install_path(self):
@@ -76,13 +63,13 @@ class App(ABC):
             return self._os_context
 
     @property
-    def user_config(self):
-        """Dictionary supplied via JSON config file.
+    def config(self):
+        """Dictionary of app-specific settings.
 
         Contains things like hardcoded installation paths, etc.
         """
-        with open(self.USER_CONFIG_PATH) as f:
-            return json.load(f)[self.__class__.__name__]
+        config = self.settings.apps_config
+        return config[self.__class__.__name__]
 
     def is_running(self, case_sensitive=True):
         this_process = self.process_name
@@ -124,7 +111,7 @@ class Steam(WindowsApp):
             except RuntimeError as e:
                 # Looks like we can't, fetch it from config
                 try:
-                    path = self.user_config['install-path']
+                    path = self.config['install-path']
                 except Exception as e_inner:
                     raise e
 

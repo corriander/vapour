@@ -39,13 +39,10 @@ import warnings
 import humanize
 import vdf
 
-from .facades import Steam, DiskManagement
+from .facades import Steam, DiskManagement, Settings
 
 
-REGISTRY_KEY_STEAM = r'SOFTWARE\Valve\Steam'
-REGISTRY_KEY_STEAMPATH = 'SteamPath'
-
-PATH_ARCHIVE = 'L:/archive/games/steam'	# TODO: Configurable.
+PATH_ARCHIVE = Settings().collections['archives']
 
 FILENAME_LIBRARY_FOLDERS = 'steamapps/libraryfolders.vdf'
 
@@ -63,7 +60,12 @@ class AppManifest(object):
 
     @property
     def archive_path(self):
-        return os.path.join(PATH_ARCHIVE, self._installdir)
+        path = os.path.normpath(os.path.dirname(self.path))
+        if path not in [os.path.normpath(p) for p in PATH_ARCHIVE]:
+            archive_path = PATH_ARCHIVE[0]
+        else:
+            archive_path = path
+        return os.path.join(path, self._installdir)
 
     @property
     def id(self):
@@ -109,11 +111,12 @@ class AppManifest(object):
         """Steam Application state dictionary."""
         return self._metadata['AppState']
 
-    def archive(self):
+    def archive(self, archive=None):
         """Copy game data and manifest to the archive."""
         abort_if_steam_is_running() # TODO: Necessary?
 
-        archive = Archive() # There's only one anyway.
+        if archive is None:
+            archive = Archive() # Use the default
 
         self._archive_manifest(archive)
         try:
@@ -564,12 +567,12 @@ class Library(object):
 
 class Archive(Library):
 
-    def __init__(self):
-        super().__init__(PATH_ARCHIVE)
+    def __init__(self, path=PATH_ARCHIVE[0]):
+        super().__init__(path)
 
     @property
     def data_root(self):
-        return os.path.normpath(PATH_ARCHIVE)
+        return os.path.normpath(self.path)
 
     @property
     def install_path(self):
@@ -701,6 +704,10 @@ class Archive(Library):
 # Functions
 #
 # --------------------------------------------------------------------
+def get_archives():
+    return [Archive(path) for path in PATH_ARCHIVE]
+
+
 def get_libraries():
     """Steam library factory."""
     lib_paths = [get_steam_path()]
@@ -765,17 +772,22 @@ def locate_game(regex):
 
 def abort_if_not_archived(appmanifest):
     # TODO: This is begging to be a decorator.
-    archive = Archive()
+    archives = get_archives()
     game = appmanifest.name
-    if game not in archive.games:
-        raise RuntimeError("Game is not archived; aborting!")
 
-    archived = archive.select(game)[0]
+    exists = [game in archive.games for archive in archives]
+    if not any(exists):
+        raise RuntimeError("Game is not archived; aborting!")
+    else:
+        archive_idx = [i for i, x in enumerate(exists) if x][-1]
+        archive = archives[archive_idx]
+
+    archived_game = archive.select(game)[0]
 
     size_delta = (appmanifest.inspect_size() -
-                  archive.get_archived_game_size(archived))
+                  archive.get_archived_game_size(archived_game))
 
-    if appmanifest != archived or size_delta:
+    if appmanifest != archived_game or size_delta:
         # TODO: Consider going deeper to inspect how...
         raise RuntimeError("Archived game differs; aborting!")
 
@@ -790,3 +802,13 @@ def abort_if_steam_is_running():
 
 def steam_is_running():
     return Steam().is_running()
+
+
+# --------------------------------------------------------------------
+#
+# Data
+#
+# --------------------------------------------------------------------
+libs = get_libraries()
+
+archives = get_archives()
