@@ -28,20 +28,19 @@ See also:
 
   - https://github.com/Holiverh/python-valve/blob/master/valve/steam/client.py
 """
-
 import os
 import re
 import glob
 import math
-import psutil
 import shutil
 import textwrap
 import warnings
-import winreg
-import wmi
 
 import humanize
 import vdf
+
+from .facades import Steam, DiskManagement
+
 
 REGISTRY_KEY_STEAM = r'SOFTWARE\Valve\Steam'
 REGISTRY_KEY_STEAMPATH = 'SteamPath'
@@ -234,15 +233,18 @@ class AppManifest(object):
 
 class Library(object):
 
+    disk_management = DiskManagement()
+
     def __init__(self, path):
         self.path = os.path.normpath(os.path.expanduser(path))
 
     @property
     def free(self):
         """Free disk space available to this library."""
-        for disk in wmi.WMI().Win32_LogicalDisk():
-            if self.__get_drive_caption() == disk.caption:
-                return humanize.naturalsize(disk.FreeSpace)
+        bytes_free = self.disk_management.get_free_space(
+            self.install_path
+        )
+        return humanize.naturalsize(bytes_free)
 
     @property
     def install_path(self):
@@ -741,14 +743,7 @@ def same_partition(path1, path2):
 
 def get_steam_path():
     """Retrieve the Steam install path from the Windows registry."""
-    key = winreg.HKEY_CURRENT_USER
-    subkey = REGISTRY_KEY_STEAM
-    access_flag = winreg.KEY_QUERY_VALUE
-
-    steam_key = winreg.OpenKey(key, subkey, access=access_flag)
-    value_typeflag = winreg.QueryValueEx(steam_key,
-                                         REGISTRY_KEY_STEAMPATH)
-    return os.path.normpath(value_typeflag[0])
+    return Steam().install_path
 
 
 def get_directory_size(path):
@@ -794,5 +789,4 @@ def abort_if_steam_is_running():
 
 
 def steam_is_running():
-    return 'Steam.exe' in set([ps.name()
-                               for ps in psutil.process_iter()])
+    return Steam().is_running()
