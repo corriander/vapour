@@ -1,0 +1,12 @@
+name: gameadmin
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.6
+  - humanize
+  - psutil
+  - pip
+  - pip:
+      - vdf
+      - wmi
