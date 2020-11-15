@@ -17,6 +17,11 @@ with this.
 Usage
 -----
 
+### API
+
+	uvicorn vapour.api.main:app --reload
+	http://127.0.0.1:8000/docs
+
 ### Library Management
 
 Archiving and removing a game from the steam library to make space for
