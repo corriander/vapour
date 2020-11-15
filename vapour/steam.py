@@ -238,16 +238,28 @@ class Library(object):
 
     disk_management = DiskManagement()
 
+    data_attributes = (
+        'path',
+        'install_path',
+        'data_root',
+        'size',
+        'free_bytes'
+    )
+
     def __init__(self, path):
         self.path = os.path.normpath(os.path.expanduser(path))
 
     @property
     def free(self):
         """Free disk space available to this library."""
-        bytes_free = self.disk_management.get_free_space(
+        return humanize.naturalsize(self.free_bytes)
+
+    @property
+    def free_bytes(self):
+        """Free disk space available to this library in Bytes."""
+        return self.disk_management.get_free_space(
             self.install_path
         )
-        return humanize.naturalsize(bytes_free)
 
     @property
     def install_path(self):
@@ -550,6 +562,10 @@ class Library(object):
 
     def __get_drive_caption(self):
         return os.path.splitdrive(self.install_path)[0].upper()
+
+    def __iter__(self):
+        for key in self.data_attributes:
+            yield (key, getattr(self, key))
 
     def __str__(self):
         # Simple string representation giving location and size.

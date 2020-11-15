@@ -2,16 +2,28 @@
 import unittest
 from unittest.mock import patch, MagicMock, PropertyMock
 
-from ..facades.disks import AbstractDiskManagement
 from ..facades import disks
 
-from ..steam import Library
+from ..steam import Library, AppManifest
 
 
 class TestLibrary(unittest.TestCase):
 
+    def setup_mock_disks_facade(self):
+        self.mock_disk_manager = MagicMock(spec=disks.AbstractDiskManagement)
+        self.mock_disk_manager.get_free_space.return_value = 5807849472
+        return self.mock_disk_manager
+
+    def setup_mock_games(self):
+        self.mock_games = {
+            'game1': MagicMock(spec=AppManifest, size=330000),
+            'game2': MagicMock(spec=AppManifest, size=324789)
+        }
+
     def setUp(self):
         self.sut = Library('C:/SteamLibrary')
+        self.sut.disk_management = self.setup_mock_disks_facade()
+        self.setup_mock_games()
 
     def test_disk_management(self):
         """Property is a concrete disk management facade.
@@ -20,7 +32,7 @@ class TestLibrary(unittest.TestCase):
         properly by the facades sub-pacakage.
         """
         self.assertIsInstance(self.sut.disk_management,
-                AbstractDiskManagement)
+                disks.AbstractDiskManagement)
 
     @patch.object(Library, 'install_path', new_callable=PropertyMock)
     def test_free(self, stub_install_path_property):
@@ -33,16 +45,29 @@ class TestLibrary(unittest.TestCase):
         that facade's method and transforms it to a human readable
         string.
         """
-        mock_facade = MagicMock(spec=AbstractDiskManagement)
-        mock_facade.get_free_space.return_value = 5807849472
 
         # Set up the properties this property uses; the facade to get
         # disk space used and the location of game installations.
-        self.sut.disk_management = mock_facade
         dummy_install_path = 'C:/SteamLibrary/steamapps/common'
         stub_install_path_property.return_value = dummy_install_path
 
         self.assertEqual(self.sut.free, '5.8 GB')
+        self.mock_disk_manager.get_free_space.assert_called_with(
+            dummy_install_path)
+
+    @patch.object(Library, 'games', new_callable=PropertyMock)
+    def test___iter__(self, mock_games_property):
+        """__iter__ is overriden to support conversion to a dict."""
+        mock_games_property.return_value = self.mock_games
+        expected = {
+            'path': 'C:/SteamLibrary',
+            'install_path': 'C:/SteamLibrary/steamapps/common',
+            'data_root': 'C:/SteamLibrary/steamapps',
+            'size': 654789,
+            'free_bytes': self.mock_disk_manager.get_free_space()
+        }
+
+        self.assertEqual(dict(self.sut), expected)
 
 
 if __name__ == '__main__':
