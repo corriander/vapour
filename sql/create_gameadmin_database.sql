@@ -240,3 +240,27 @@ END
 $DEF$
 LANGUAGE plpgsql
 ;
+
+CREATE OR REPLACE VIEW perfmon.proctime_view AS
+  WITH base_data AS (
+           SELECT date_trunc('second', t) AS t
+                , avg(core0) AS core0
+                , avg(core1) AS core1
+                , avg(core2) AS core2
+                , avg(core3) AS core3
+             FROM perfmon.proctime
+            GROUP BY 1
+       )
+     , timeidx AS (
+           SELECT t.t 
+             FROM generate_series(
+                      (SELECT date_trunc('second', min(t)) FROM base_data),
+                      (SELECT date_trunc('second', max(t)) FROM base_data),
+                      INTERVAL '1 second'
+                  ) t(t)
+       )
+SELECT *
+  FROM timeidx
+  LEFT OUTER JOIN base_data USING (t)
+ ORDER BY 1
+; 
