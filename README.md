@@ -1,3 +1,6 @@
+Vapour
+======
+
 Some basic administrative tools for me to manage games libraries in bit
 more of an organised manner.
 
@@ -53,7 +56,7 @@ In Git Bash:
 
 	for f in *frametimes.csv
 	do 
-		echo "SELECT fraps.import_frames('$(pwd)/$f');" | sed 's#^/\([a-zA-Z]\)#\1:#'
+		echo "SELECT fraps.import_frames('"$(pwd | sed 's#^/\([a-zA-Z]\)#\1:#')"/$f');" 
 	done | psql -d gameadmin
 
 
@@ -93,10 +96,10 @@ Preprocess the binary logs in PowerShell:
 		relog $_.FullName -f csv -o $("../../csv/" + $_.Directory.BaseName + "_percore.csv")
 	}
 
-Dates are in DD/MM/YYYY format in my locale; fix:
+Dates are in MM/DD/YYYY format in my locale; fix:
 
 	Get-ChildItem *.csv | ForEach-Object {
-		(Get-Content $_.FullName) -replace "(\d{2})\/(\d{2})\/(\d{4}) ", '$3-$2-$1T' | Set-Content $_.FullName
+		(Get-Content $_.FullName) -replace "(\d{2})\/(\d{2})\/(\d{4}) ", '$3-$1-$2T' | Set-Content $_.FullName
 	}
 
 NULLs are ' '; this also needs fixing:
@@ -109,3 +112,27 @@ NULLs are ' '; this also needs fixing:
 > Note that there is no attempt to preserve the core numbering. It's
 > not envisioned this is important but if it is it should probably
 > happen in the pre-processing step.
+
+
+Issues
+------
+
+### `steam`
+
+  - Archiving should remove the game from the library by default. It's
+    not that sensible to treat a game as "archived" if it's remained
+	in a library and since had significant updates. Removing the game
+	(making it either active or inactive) sidesteps this and is
+	probably the desired effect. This also avoids having to implement
+	an easy way of checking whether a game is in the archive (it
+	either is in there, *or* a library).
+
+	> The only issue with this is that archiving is being used as a
+	> safety net for moving games between libraries. That said,
+	> libraries exist on different filesystems, so there's no
+	> opportunity for a quick from lib-to-lib, but there's a
+	> possibility of a quick move from lib-to-archive, or
+	> archive-to-lib, as that may exist on the same filesystem...
+	> (though it seems rather pointless having games archived when
+	> they could be installed in a co-located library - it's just
+	> ended up this way on my system).
