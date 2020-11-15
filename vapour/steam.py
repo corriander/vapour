@@ -241,7 +241,7 @@ class Library(object):
     data_attributes = (
         'path',
         'install_path',
-        'data_root',
+        'apps_path',
         'size',
         'free_bytes'
     )
@@ -263,8 +263,15 @@ class Library(object):
 
     @property
     def install_path(self):
-        """Location of game data."""
-        return os.path.join(self.data_root, 'common')
+        """Location of game data.
+
+        Deprecated; use d_path"""
+        return os.path.join(self.apps_path, 'common')
+
+    @property
+    def apps_path(self):
+        """Contains manifests (and game data in a nested directory)."""
+        return os.path.join(self.path, 'steamapps')
 
     @property
     def size(self):
@@ -283,20 +290,15 @@ class Library(object):
         return {am.name: am for am in self.get_manifests()}
 
     @property
-    def data_root(self):
-        """Contains manifests (and game data in a nested directory)."""
-        return os.path.join(self.path, 'steamapps')
-
-    @property
     def _acf_glob(self):
-        return os.path.join(self.data_root, '*.acf')
+        return os.path.join(self.apps_path, '*.acf')
 
     def archive(self, appmanifest):
         appmanifest.archive()
     archive.__doc__ = AppManifest.archive.__doc__
 
     def get_manifests(self):
-        """Return a list of manifests found in the data_root."""
+        """Return a list of manifests found in the apps_path."""
         manifests = []
         for path in glob.glob(self._acf_glob):
             manifests.append(AppManifest(path, lib=self))
@@ -587,14 +589,15 @@ class Archive(Library):
         super().__init__(path)
 
     @property
-    def data_root(self):
+    def apps_path(self):
         return os.path.normpath(self.path)
 
     @property
     def install_path(self):
         """Path of game install directories in Archive.
+
         """
-        return self.data_root
+        return self.apps_path
 
     def get_archived_game_size(self, appmanifest):
         return get_directory_size(appmanifest.archive_path)
@@ -663,9 +666,9 @@ class Archive(Library):
         if appmanifest is not None:
             # Check we're actually looking at an archived appmanifest.
             common_prefix = os.path.commonprefix(
-                [appmanifest.install_path, self.data_root]
+                [appmanifest.install_path, self.apps_path]
             )
-            if common_prefix != self.data_root:
+            if common_prefix != self.apps_path:
                 raise ValueError("AppManifest is not in archive.")
             appmanifests_to_remove.append(appmanifest)
 
@@ -694,7 +697,7 @@ class Archive(Library):
             os.remove(am.path)
             try:
                 shutil.rmtree(os.path.join(
-                    self.data_root,
+                    self.apps_path,
                     os.path.basename(am.install_path)
                 ))
             except FileNotFoundError:
