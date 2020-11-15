@@ -718,7 +718,9 @@ def get_libraries():
     i = 1
     while True:
         try:
-            lib_paths.append(os.path.normpath(dct[str(i)]))
+            lib_paths.append(
+                DiskManagement.translate_path(dct[str(i)])
+            )
         except KeyError:
             break
         i += 1

@@ -4,6 +4,7 @@ Provides a uniform interface for operations using disparate disk
 disk management APIs available on different platforms.
 """
 import os
+import ntpath
 from abc import ABC, abstractmethod
 from collections import namedtuple
 
@@ -70,6 +71,10 @@ class WinDiskManagement(AbstractDiskManagement):
         raise ValueError(msg)
 
     @staticmethod
+    def translate_path(path):
+        return os.path.normpath(path)
+
+    @staticmethod
     def _enumerate_disks():
         # Returns WindowsDisk objects
         return [
@@ -85,8 +90,22 @@ class WinDiskManagement(AbstractDiskManagement):
 
 class WslDiskManagement(AbstractDiskManagement):
 
-    def get_free_space(self, path):
+    @staticmethod
+    def get_free_space(path):
         return LinuxDisk.from_path(path).free_bytes
+
+    @staticmethod
+    def translate_path(path):
+        drive, path = ntpath.splitdrive(path)
+        relative_path = os.path.join(*path.split(ntpath.sep))
+        if drive:
+            # Windows path
+            path = os.path.join('/', 'mnt', drive[0].lower(),
+                                relative_path)
+        else:
+            path = relative_path
+
+        return os.path.normpath(path)
 
 
 DiskManagement = {
