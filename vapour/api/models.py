@@ -15,6 +15,14 @@ class BaseModel(OriginalBaseModel):
         allow_population_by_field_name = True
 
 
+class Game(BaseModel):
+    id: int
+    name: str
+    manifest_path: str
+    install_path: str
+    size: int
+
+
 class Library(BaseModel):
     id: int
     path: str

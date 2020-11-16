@@ -1,10 +1,31 @@
 """Test Cases for the Steam Module."""
+import os
 import unittest
 from unittest.mock import patch, MagicMock, PropertyMock
 
 from ..facades import disks
 
 from ..steam import Library, AppManifest
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
+
+class TestAppManifest(unittest.TestCase):
+
+    def setUp(self):
+        self.sut = AppManifest(os.path.join(DATA_DIR, 'appmanifest_379720.acf'))
+
+    def test___iter__(self):
+        """__iter__ is overriden to support conversion to a dict."""
+
+        expected_data = {
+            'id':379720,
+            'name': "DOOM",
+            'manifest_path': os.path.join(DATA_DIR, 'appmanifest_379720.acf'),
+            'install_path': os.path.join(DATA_DIR, 'common', 'DOOM'),
+            'size': 73756206574
+        }
+
+        self.assertEqual(dict(self.sut), expected_data)
 
 
 class TestLibrary(unittest.TestCase):
@@ -62,7 +83,7 @@ class TestLibrary(unittest.TestCase):
         expected = {
             'path': 'C:/SteamLibrary',
             'install_path': 'C:/SteamLibrary/steamapps/common',
-            'data_root': 'C:/SteamLibrary/steamapps',
+            'apps_path': 'C:/SteamLibrary/steamapps',
             'size': 654789,
             'free_bytes': self.mock_disk_manager.get_free_space()
         }

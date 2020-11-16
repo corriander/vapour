@@ -28,6 +28,7 @@ See also:
 
   - https://github.com/Holiverh/python-valve/blob/master/valve/steam/client.py
 """
+import abc
 import os
 import re
 import glob
@@ -46,17 +47,39 @@ PATH_ARCHIVE = Settings().collections['archives']
 
 FILENAME_LIBRARY_FOLDERS = 'steamapps/libraryfolders.vdf'
 
+class Model(abc.ABC):
+
+    @abc.abstractproperty
+    def data_attributes(self):
+        return tuple()
+
+    def __iter__(self):
+        for key in self.data_attributes:
+            yield (key, getattr(self, key))
+
 
 # NOTE: It might be more semantically accurate to call this a game.
 #       It's OK for a game to be built from an AppManifest...
-class AppManifest(object):
+class AppManifest(Model):
     """Encapsulation of metadata in appmanifest ACF."""
+
+    data_attributes = (
+        'id',
+        'name',
+        'manifest_path',
+        'install_path',
+        'size',
+    )
 
     def __init__(self, path, lib=None):
         self.path = path
         self.lib = lib
         with open(path, 'r') as f:
             self._metadata = vdf.load(f)
+
+    @property
+    def manifest_path(self):
+        return self.path
 
     @property
     def archive_path(self):
@@ -234,7 +257,7 @@ class AppManifest(object):
         return self._metadata == other._metadata
 
 
-class Library(object):
+class Library(Model):
 
     disk_management = DiskManagement()
 
@@ -564,10 +587,6 @@ class Library(object):
 
     def __get_drive_caption(self):
         return os.path.splitdrive(self.install_path)[0].upper()
-
-    def __iter__(self):
-        for key in self.data_attributes:
-            yield (key, getattr(self, key))
 
     def __str__(self):
         # Simple string representation giving location and size.
