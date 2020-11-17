@@ -17,6 +17,11 @@ with this.
 Usage
 -----
 
+### UI
+
+    conda install nodejs
+    npm install npm@latest -g
+
 ### API
 
 	uvicorn vapour.api.main:app --reload
