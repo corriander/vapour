@@ -3,7 +3,7 @@
 }
 
 .App-logo {
-  height: 40vmin;
+  height: 300px;
   pointer-events: none;
 }
 
@@ -35,4 +35,41 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.clearfix {
+  clear: both;
+}
+
+.box {
+  width: 500px;
+  color: #333;
+  border: 1px solid #ddd;
+}
+.title-box {
+  cursor: pointer;
+  padding: 15px;
+  background-color: #f5f5f5;
+}
+.title {
+  width: calc(100% - 20px);
+}
+.icon {
+  width: 20px;
+  display: flex;
+  color: #666;
+  float: right;
+}
+.icon .fa {
+  font-size: 20px;
+  transition: all 0.1s;
+  transform: rotate(90deg);
+}
+.icon .fa.down {
+  transform: rotate(0deg);
+}
+
+.content {
+  padding: 15px;
+  border-top: 1px solid #ddd;
 }
