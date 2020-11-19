@@ -1,4 +1,4 @@
-import { Component, useState } from 'react';
+import { useState } from 'react';
 
 export default function Accordion(props) {
     const [expand, setExpand] = useState(props.isExpand);
