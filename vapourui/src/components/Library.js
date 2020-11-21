@@ -6,8 +6,7 @@ export default function Library(props) {
     return (
       <Accordion title={props.path}>
         <img src={logo} className="App-logo" alt="logo" />
-
-        <p>{humanise(props.size)} | {humanise(props.free)} free</p>
+        <p>{props.gameCount} Games | {humanise(props.size)} | {humanise(props.free)} free</p>
       </Accordion>
     )
 }

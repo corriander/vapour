@@ -266,7 +266,8 @@ class Library(Model):
         'install_path',
         'apps_path',
         'size',
-        'free_bytes'
+        'free_bytes',
+        'games'
     )
 
     def __init__(self, path):
