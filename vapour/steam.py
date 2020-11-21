@@ -306,10 +306,14 @@ class Library(Model):
         disk. For example, if a manifest is deleted, the game data
         will still be there.
         """
-        return sum(am.size for am in self.games.values())
+        return sum(am.size for am in self.game_lookup.values())
 
     @property
     def games(self):
+        return self.get_manifests()
+
+    @property
+    def game_lookup(self):
         """Dictionary of games keyed by name."""
         return {am.name: am for am in self.get_manifests()}
 
@@ -421,7 +425,7 @@ class Library(Model):
         for game in d:
             if game == 'lib':
                 continue
-            if self.games[game] in issues_dict['dangling-manifests']:
+            if self.game_lookup[game] in issues_dict['dangling-manifests']:
                 issues_dict['size-discrepancy'].pop(game)
 
         return issues_dict
@@ -530,7 +534,7 @@ class Library(Model):
 
         am_dname_set = set(
             str.lower(os.path.basename(game.install_path))
-            for game in self.games.values()
+            for game in self.game_lookup.values()
         )
 
         return set(
@@ -543,13 +547,13 @@ class Library(Model):
         path = self.install_path
         return set(
             appmanifest
-            for appmanifest in self.games.values()
+            for appmanifest in self.game_lookup.values()
             if not os.path.exists(appmanifest.install_path)
         )
 
     def _size_discrepancies(self):
         d = {'lib': self.size - self.inspect_size()}
-        for game, am in self.games.items():
+        for game, am in self.game_lookup.items():
             delta = am.size_delta()
             if not am.size:
                 d[game] = math.nan
@@ -581,7 +585,7 @@ class Library(Model):
 
     def select(self, regex):
         matches = []
-        for name, manifest in self.games.items():
+        for name, manifest in self.game_lookup.items():
             if re.search(regex, name) is not None:
                 matches.append(manifest)
         return matches
@@ -592,7 +596,7 @@ class Library(Model):
     def __str__(self):
         # Simple string representation giving location and size.
         drive = self.__get_drive_caption()
-        count = len(self.games)
+        count = len(self.game_lookup)
         size = humanize.naturalsize(self.size)
         return "Steam Library ({}, {} games, {})".format(drive,
                                                          count,
@@ -627,7 +631,7 @@ class Archive(Library):
         issues_dict = super().issues()
 
         redundant_games = []
-        for name in self.games:
+        for name in self.game_lookup:
             hits = locate_game(name)
             redundant_games.extend(
                 [(lib.select(name)[0], lib) for lib in hits]
@@ -816,7 +820,7 @@ def abort_if_not_archived(appmanifest):
     archives = get_archives()
     game = appmanifest.name
 
-    exists = [game in archive.games for archive in archives]
+    exists = [game in archive.game_lookup for archive in archives]
     if not any(exists):
         raise RuntimeError("Game is not archived; aborting!")
     else:

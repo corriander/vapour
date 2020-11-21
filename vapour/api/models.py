@@ -1,5 +1,5 @@
 import re
-from typing import Dict
+from typing import List
 
 from pydantic import BaseModel as OriginalBaseModel
 
@@ -31,4 +31,4 @@ class Library(BaseModel):
     apps_path: str
     size: int
     free_bytes: int
-    games: Dict[str, Game]
+    games: List[Game]

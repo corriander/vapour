@@ -22,7 +22,7 @@ export default function LibrarySet (props) {
 
       for (let library of libraries) {
         final.push(
-          <Library path={library.path} gameCount={library.games.length} size={library.size} free={library.freeBytes}/>
+          <Library id={library.id} path={library.path} games={library.games} size={library.size} free={library.freeBytes}/>
         )
       }
 
