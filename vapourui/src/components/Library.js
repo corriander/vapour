@@ -1,11 +1,21 @@
-import logo from '../logo.svg'
 import Accordion from './Accordion'
+import LibraryChart from './LibraryChart'
 
 
 export default function Library(props) {
+
+    const sizeData = [];
+
+    for (let game of props.games) {
+      let sizeDatum = (({name, size}) => ({name, size}))(game);
+      sizeData.push(sizeDatum);
+    }
+
+    sizeData.sort((a, b) => b.size - a.size);
+
     return (
       <Accordion title={props.path}>
-        <img src={logo} className="App-logo" alt="logo" />
+        <LibraryChart id={props.id} data={sizeData}/>
         <p>{props.games.length} Games | {humanise(props.size)} | {humanise(props.free)} free</p>
       </Accordion>
     )
