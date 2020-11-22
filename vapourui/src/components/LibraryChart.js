@@ -10,20 +10,103 @@ am4core.useTheme(am4themes_animated);
 export default function LibraryChart(props) {
     const chart = useRef(null);
     const divId = "chartdiv-" + props.id
+    const freeSlice = {name: "Remaining", size: props.free}
 
     useLayoutEffect(() => {
         let x = am4core.create(divId, am4charts.PieChart);
 
         x.paddingRight = 20;
 
-        // Add data
-        x.data = props.data
+        // Two-level pie chart https://www.amcharts.com/demos/two-level-pie-chart/
+        x.innerRadius = am4core.percent(30);
 
-        // Add and configure Series
-        let pieSeries = x.series.push(new am4charts.PieSeries());
-        pieSeries.dataFields.value = "size";
-        pieSeries.dataFields.category = "name";
-        // ...
+        // Add data -- added to series explicitly now
+        //x.data = props.data
+
+        // Add and configure background Series
+        let fgSeries = x.series.push(new am4charts.PieSeries());
+        fgSeries.dataFields.value = "size";
+        fgSeries.dataFields.category = "name";
+        fgSeries.slices.template.stroke = am4core.color("#fff");
+        fgSeries.innerRadius = 10;
+        fgSeries.slices.template.fillOpacity = 0.6;
+        fgSeries.slices.template.tooltipPosition = "pointer";
+
+        fgSeries.slices.template.propertyFields.disabled = "labelDisabled";
+        //fgSeries.labels.template.propertyFields.disabled = "labelDisabled";
+        fgSeries.ticks.template.propertyFields.disabled = "labelDisabled";
+        fgSeries.labels.template.disabled = true;
+
+        // Set data (including missing slice)
+        let missingSlice = { ...freeSlice };
+        missingSlice.labelDisabled = true;
+        fgSeries.data = JSON.parse(JSON.stringify(props.data));
+        fgSeries.data.push(missingSlice);
+
+        fgSeries.adapter.add("innerRadius", function(innerRadius, target){
+            return am4core.percent(20);
+        })
+        fgSeries.adapter.add("radius", function(innerRadius, target){
+            return am4core.percent(100);
+        })
+
+
+        let bgSeries = x.series.push(new am4charts.PieSeries());
+        bgSeries.dataFields.value = "size";
+        bgSeries.dataFields.category = "name";
+        bgSeries.slices.template.propertyFields.fill = "fill";
+        bgSeries.slices.template.tooltipPosition = "pointer";
+        bgSeries.slices.template.states.getKey("active").properties.shiftRadius = 0;
+        //bgSeries.alignLabels = false;
+
+        // Set data (including remaining disk space)
+        let remainingSlice = { ...freeSlice };
+        remainingSlice.fill = "#dedede";
+        //remainingSlice.labelDisabled = false;
+        bgSeries.data = JSON.parse(JSON.stringify(props.data));
+        //bgSeries.data.forEach(slice => slice.labelDisabled = true)
+        bgSeries.data.push(remainingSlice);
+
+        // Disable poppping out of slices on background series
+        bgSeries.slices.template.states.getKey("hover").properties.shiftRadius = 0;
+        bgSeries.slices.template.states.getKey("hover").properties.scale = 1;
+
+        bgSeries.adapter.add("innerRadius", function(innerRadius, target){
+            return am4core.percent(20);
+        })
+        bgSeries.adapter.add("radius", function(innerRadius, target){
+            return am4core.percent(40);
+        })
+
+        fgSeries.slices.template.events.on("hit", function(e) {
+            let series = e.target.dataItem.component;
+            series.slices.each(function(item) {
+                if (item.isActive && item != e.target) {
+                    item.isActive = false;
+                }
+            })
+        });
+
+        bgSeries.labels.events.on("ready", labelsReady);
+
+        function labelsReady(ev) {
+            console.log("I'm here");
+        }
+
+        bgSeries.ticks.template.events.on("ready", hideSmall);
+        bgSeries.ticks.template.events.on("visibilitychanged", hideSmall);
+        bgSeries.labels.template.events.on("ready", hideSmall);
+        bgSeries.labels.template.events.on("visibilitychanged", hideSmall);
+
+        function hideSmall(ev) {
+            if (ev.target.dataItem && (ev.target.dataItem.values.value.percent < props.threshold)) {
+              ev.target.hide()
+            }
+            else {
+               ev.target.show();
+            }
+        }
+
         chart.current = x;
 
         return () => {
