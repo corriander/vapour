@@ -1,4 +1,4 @@
-import React, { useRef, useLayoutEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 import * as am4core from "@amcharts/amcharts4/core";
 import * as am4charts from "@amcharts/amcharts4/charts";
@@ -12,7 +12,8 @@ export default function LibraryChart(props) {
     const divId = "chartdiv-" + props.id
     const freeSlice = {name: "Remaining", size: props.free}
 
-    useLayoutEffect(() => {
+    useEffect(() => {
+
         let x = am4core.create(divId, am4charts.PieChart);
 
         x.paddingRight = 20;
@@ -22,6 +23,7 @@ export default function LibraryChart(props) {
 
         // Add data -- added to series explicitly now
         //x.data = props.data
+        let sizeData = [...props.data].sort((a,b) => b.size - a.size);
 
         // Add and configure background Series
         let fgSeries = x.series.push(new am4charts.PieSeries());
@@ -40,7 +42,7 @@ export default function LibraryChart(props) {
         // Set data (including missing slice)
         let missingSlice = { ...freeSlice };
         missingSlice.labelDisabled = true;
-        fgSeries.data = JSON.parse(JSON.stringify(props.data));
+        fgSeries.data = [...sizeData];
         fgSeries.data.push(missingSlice);
 
         fgSeries.adapter.add("innerRadius", function(innerRadius, target){
@@ -63,7 +65,7 @@ export default function LibraryChart(props) {
         let remainingSlice = { ...freeSlice };
         remainingSlice.fill = "#dedede";
         //remainingSlice.labelDisabled = false;
-        bgSeries.data = JSON.parse(JSON.stringify(props.data));
+        bgSeries.data = [...sizeData];
         //bgSeries.data.forEach(slice => slice.labelDisabled = true)
         bgSeries.data.push(remainingSlice);
 
@@ -81,7 +83,7 @@ export default function LibraryChart(props) {
         fgSeries.slices.template.events.on("hit", function(e) {
             let series = e.target.dataItem.component;
             series.slices.each(function(item) {
-                if (item.isActive && item != e.target) {
+                if (item.isActive && item !== e.target) {
                     item.isActive = false;
                 }
             })
@@ -115,12 +117,12 @@ export default function LibraryChart(props) {
     }, []);
 
     // When the paddingRight prop changes the chart will update
-    useLayoutEffect(() => {
+    useEffect(() => {
         chart.current.paddingRight = props.paddingRight;
     }, [props.paddingRight]);
 
     return (
-        <div id={divId} style={{ width: "100%", height: "300px" }}></div>
+        <div id={divId} style={{ width: "100%", height: "500px" }}></div>
     );
 }
 

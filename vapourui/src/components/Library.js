@@ -1,22 +1,19 @@
 import Accordion from './Accordion'
 import LibraryChart from './LibraryChart'
 
+import { useQuery } from 'react-query';
+import { getGames } from '../services/libraryService';
+
 
 export default function Library(props) {
+    const { data: games, isLoading, error } = useQuery(["librarygames", props.id], getGames);
 
-    const sizeData = [];
-    for (let game of props.games) {
-      let sizeDatum = (({name, size}) => ({name, size}))(game);
-      sizeData.push(sizeDatum);
-    }
-    sizeData.sort((a, b) => b.size - a.size);
-
+    // Prepare data for LibraryChart
     const threshold = 10e9 / (props.size + props.free) * 100;
 
     return (
       <Accordion title={props.path}>
-        <LibraryChart id={props.id} data={sizeData} free={props.free} threshold={threshold}/>
-        <p>{props.games.length} Games | {humanise(props.size)} | {humanise(props.free)} free</p>
+        <LibraryChart id={props.id} free={props.free} threshold={threshold} data={games}/>
       </Accordion>
     )
 }

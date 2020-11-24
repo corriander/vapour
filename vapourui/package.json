@@ -10,10 +10,16 @@
     "@testing-library/jest-dom": "^5.11.4",
     "@testing-library/react": "^11.1.0",
     "@testing-library/user-event": "^12.1.10",
+    "axios": "^0.21.0",
+    "fancygrid": "^1.7.139",
+    "fancygrid-react": "^1.0.19",
     "framer-motion": "^2.9.4",
+    "http-proxy-middleware": "^1.0.6",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
+    "react-query": "^2.26.3",
     "react-scripts": "4.0.0",
+    "react-table": "^7.6.2",
     "web-vitals": "^0.2.4"
   },
   "scripts": {
