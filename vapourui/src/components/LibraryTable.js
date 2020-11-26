@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useSortBy, useTable } from 'react-table';
+import CssBaseline from '@material-ui/core/CssBaseline'
 import { makeStyles } from '@material-ui/core/styles';
 import Paper from "@material-ui/core/Paper"
+import TableContainer from "@material-ui/core/TableContainer"
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
 import TableCell from "@material-ui/core/TableCell";
@@ -18,7 +20,10 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(2),
   },
   table: {
-    minWidth: 750,
+    minWidth: 500,
+  },
+  headercell: {
+    fontWeight: 700,
   },
   visuallyHidden: {
     border: 0,
@@ -33,6 +38,8 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+// See https://stackoverflow.com/a/64489401 for alternative styling approach
+
 export default function LibraryTable({ columns, data }) {
     const classes = useStyles();
 
@@ -46,8 +53,11 @@ export default function LibraryTable({ columns, data }) {
     } = tableInstance
 
     return (
+      <div className={classes.root}>
+        <CssBaseline/>
         <Paper className={classes.paper}>
-          <Table {...getTableProps()}>
+          <TableContainer>
+          <Table {...getTableProps()} className={classes.table}>
               <TableHead>
                   {// loop over the header rows
                   headerGroups.map(headerGroup => (
@@ -56,8 +66,9 @@ export default function LibraryTable({ columns, data }) {
                       {// loop over the headers in each row
                       headerGroup.headers.map(column =>(
                         // apply the header cell props
-                        <TableCell
+                        <TableCell className={classes.headercell}
                           {...column.getHeaderProps(column.getSortByToggleProps())}
+                          align={column.isNumeric ? 'right' : 'left'}
                           >
                             <TableSortLabel
                               active={column.isSorted}
@@ -89,6 +100,7 @@ export default function LibraryTable({ columns, data }) {
                             return (
                                <TableCell
                                  {...cell.getCellProps()}
+                                 align={cell.column.isNumeric ? 'right' : 'left' }
                                >
                                    {// render the cell contents
                                    cell.render('Cell')}
@@ -100,7 +112,9 @@ export default function LibraryTable({ columns, data }) {
                   })}
               </TableBody>
           </Table>
+          </TableContainer>
         </Paper>
+      </div>
     );
 }
 
