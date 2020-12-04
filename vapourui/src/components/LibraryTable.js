@@ -1,5 +1,5 @@
 import React from 'react';
-import { useSortBy, useTable } from 'react-table';
+import { useSortBy, useTable, useRowSelect } from 'react-table';
 import CssBaseline from '@material-ui/core/CssBaseline'
 import { makeStyles } from '@material-ui/core/styles';
 import Paper from "@material-ui/core/Paper"
@@ -43,7 +43,7 @@ const useStyles = makeStyles((theme) => ({
 export default function LibraryTable({ columns, data }) {
     const classes = useStyles();
 
-    const tableInstance = useTable({ columns, data }, useSortBy);
+    const tableInstance = useTable({ columns, data }, useSortBy, useRowSelect);
     const {
         getTableProps,
         getTableBodyProps,
@@ -94,7 +94,11 @@ export default function LibraryTable({ columns, data }) {
                     prepareRow(row)
                     return (
                       // apply the row propers
-                      <TableRow {...row.getRowProps()}>
+                      <TableRow
+                        {...row.getRowProps()}
+                        hover
+                        onClick={() => row.toggleRowSelected(!row.isSelected)}
+                      >
                          {// loop over the cells
                          row.cells.map(cell => {
                             return (
