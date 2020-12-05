@@ -43,6 +43,24 @@ const useStyles = makeStyles((theme) => ({
 export default function LibraryTable({ columns, data }) {
     const classes = useStyles();
 
+    const columns = React.useMemo(() => [
+      {
+        Header: "AppID",
+        accessor: "id",
+        isNumeric: false
+      },
+      {
+        Header: "Game",
+        accessor: "name",
+        isNumeric: false
+      },
+      {
+        Header: "Size (GiB)",
+        accessor: "size",
+        isNumeric: true
+      },
+    ], [])
+
     const tableInstance = useTable({ columns, data }, useSortBy, useRowSelect);
     const {
         getTableProps,

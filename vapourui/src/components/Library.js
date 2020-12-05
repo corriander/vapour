@@ -20,23 +20,11 @@ export default function Library(props) {
       return isLoading ? [] : games.map(obj => ({ ...obj, size: gebify(obj.size) }))
     }, [games]);
 
-    const columns = React.useMemo(() => [
-        {
-          Header: "Game",
-          accessor: "name",
-          isNumeric: false
-        },
-        {
-          Header: "Size (GiB)",
-          accessor: "size",
-          isNumeric: true
-        },
-      ]
-    )
+
     return (
       <Accordion title={props.path}>
         <LibraryChart id={props.id} free={gebify(props.free)} threshold={threshold} data={humanisedGames}/>
-        <LibraryTable libraryId={props.id} columns={columns} data={humanisedGames}/>
+        <LibraryTable libraryId={props.id} data={humanisedGames}/>
       </Accordion>
     )
 }
