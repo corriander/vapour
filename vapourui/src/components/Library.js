@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Accordion from './Accordion'
 import LibraryChart from './LibraryChart'
 import LibraryTable from './LibraryTable'
@@ -9,6 +9,8 @@ import { getGames } from '../services/libraryService';
 
 export default function Library(props) {
     const { data: games, isLoading } = useQuery(["librarygames", props.id], getGames);
+    const [ focus, setFocus ] = useState(null);
+    const [ data, setData ] = useState([]);
 
     // Prepare data for components
     const gebify = x => (x / Math.pow(1024, 3)).toFixed(2);
@@ -20,11 +22,18 @@ export default function Library(props) {
       return isLoading ? [] : games.map(obj => ({ ...obj, size: gebify(obj.size) }))
     }, [games]);
 
+    useEffect(() => {
+      setData(humanisedGames.map(obj => ({ ...obj, hasFocus: false})))
+    }, [humanisedGames, focus])
+
+    useEffect(() => {
+      setData(humanisedGames.map(game => ({ ...game, hasFocus: (game.id == focus)})))
+    }, [focus, humanisedGames])
 
     return (
       <Accordion title={props.path}>
-        <LibraryChart id={props.id} free={gebify(props.free)} threshold={threshold} data={humanisedGames}/>
-        <LibraryTable libraryId={props.id} data={humanisedGames}/>
+        <LibraryChart id={props.id} free={gebify(props.free)} threshold={threshold} data={data}/>
+        <LibraryTable libraryId={props.id} data={data} selectHandler={setFocus}/>
       </Accordion>
     )
 }

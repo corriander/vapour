@@ -40,7 +40,7 @@ const useStyles = makeStyles((theme) => ({
 
 // See https://stackoverflow.com/a/64489401 for alternative styling approach
 
-export default function LibraryTable({ columns, data }) {
+export default function LibraryTable({ data, selectHandler }) {
     const classes = useStyles();
 
     const columns = React.useMemo(() => [
@@ -61,14 +61,29 @@ export default function LibraryTable({ columns, data }) {
       },
     ], [])
 
-    const tableInstance = useTable({ columns, data }, useSortBy, useRowSelect);
     const {
         getTableProps,
         getTableBodyProps,
         headerGroups,
         rows,
         prepareRow,
-    } = tableInstance
+    } = useTable({
+      columns,
+      data,
+      autoResetSelectedRows: false,
+      manualRowSelectedKey: 'hasFocus'
+    }, useSortBy, useRowSelect);
+
+    const handleClick = (event, row) => {
+      if (!row.isSelected) {
+        row.toggleRowSelected(true)
+        selectHandler(row.values.id)
+      }
+      else {
+        row.toggleRowSelected(false)
+        selectHandler(null)
+      }
+    }
 
     return (
       <div className={classes.root}>
@@ -115,7 +130,8 @@ export default function LibraryTable({ columns, data }) {
                       <TableRow
                         {...row.getRowProps()}
                         hover
-                        onClick={() => row.toggleRowSelected(!row.isSelected)}
+                        onClick={(event) => handleClick(event, row)}
+                        selected={row.isSelected}
                       >
                          {// loop over the cells
                          row.cells.map(cell => {

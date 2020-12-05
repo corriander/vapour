@@ -35,6 +35,7 @@ export default function LibraryChart(props) {
         fgSeries.slices.template.tooltipPosition = "pointer";
 
         fgSeries.slices.template.propertyFields.disabled = "labelDisabled";
+        fgSeries.slices.template.propertyFields.isActive = "hasFocus";
         //fgSeries.labels.template.propertyFields.disabled = "labelDisabled";
         fgSeries.ticks.template.propertyFields.disabled = "labelDisabled";
         fgSeries.labels.template.disabled = true;
@@ -114,7 +115,7 @@ export default function LibraryChart(props) {
         return () => {
             x.dispose();
         };
-    }, []);
+    }, [props.data]);
 
     // When the paddingRight prop changes the chart will update
     useEffect(() => {
