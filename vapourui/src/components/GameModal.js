@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { useQuery } from "react-query";
-import { getGame } from "../services/libraryService";
+import { getGame, getArchivedGame } from "../services/libraryService";
 import GameTable from "./GameTable";
 
 function getModalStyle() {
@@ -32,7 +32,18 @@ const useStyles = makeStyles((theme) => ({
 }))
 
 export default function GameModal (props) {
-      const { data, isLoading, error } = useQuery(["game", props.id], getGame);
+      const getQueryFunc = () => {
+        switch (props.gameType) {
+            case 'game':
+              return getGame
+            case 'archivedgame':
+              return getArchivedGame
+            default:
+              console.log(`${props.gameType} is an unrecognised type; should be in {game, archivedgame}`)
+        }
+      }
+      const { data, isLoading, error } = useQuery([props.gameType, props.id], getQueryFunc());
+
       const classes = useStyles();
       const [modalStyle] = useState(getModalStyle);
 
