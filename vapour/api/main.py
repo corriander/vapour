@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .. import steam
-from .models import Library, Game
+from .models import Library, Game, Archive
 
 app = FastAPI()
 
@@ -35,7 +35,12 @@ def read_library(id: int):
 
 @app.get("/archives/")
 def read_archives():
-    return [Library(id=i, **dict(lib)) for i, lib in enumerate(steam.archives)]
+    return [Archive(id=i, **dict(lib)) for i, lib in enumerate(steam.archives)]
+
+@app.get("/archives/{archive_id}/games/")
+def read_archive_games(archive_id: int):
+    return [Game(**dict(game)) for game in steam.archives[archive_id].games]
+
 
 @app.get("/libraries/{library_id}/games/")
 def read_library_games(library_id: int):
@@ -48,3 +53,11 @@ def read_all_games():
 @app.get("/games/{game_id}", response_model=Game)
 def read_game(game_id: int):
     return {game.id: game for game in [Game(**dict(game)) for lib in steam.libs for game in lib.games]}[game_id]
+
+@app.get("/archived-games/")
+def read_all_games():
+    return [Game(**dict(game)) for archive in steam.archives for game in archive.games]
+
+@app.get("/archived-games/{game_id}", response_model=Game)
+def read_game(game_id: int):
+    return {game.id: game for game in [Game(**dict(game)) for archive in steam.archives for game in archive.games]}[game_id]

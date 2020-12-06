@@ -34,3 +34,7 @@ class Library(BaseModel):
     size: int
     free_bytes: int
     games: List[Game]
+
+
+class Archive(Library):
+    max_size: int
