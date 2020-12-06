@@ -619,6 +619,8 @@ class Library(Model):
 
 class Archive(Library):
 
+    data_attributes = Library.data_attributes + ('max_size',)
+
     def __init__(self, path=PATH_ARCHIVE[0]):
         super().__init__(path)
 
@@ -632,6 +634,16 @@ class Archive(Library):
 
         """
         return self.apps_path
+
+    @property
+    def max_size(self):
+        """Ideal maximum size of the archive (leave 10% disk free)
+        """
+        disk_buffer = 0.1
+        disk_capacity = self.disk_management.get_capacity(self.path)
+        disk_free = self.free_bytes
+        disk_threshold = disk_capacity * 0.1
+        return (self.size + disk_free) - disk_threshold
 
     def get_archived_game_size(self, appmanifest):
         return get_directory_size(appmanifest.archive_path)

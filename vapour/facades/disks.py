@@ -17,7 +17,7 @@ if PLATFORM == Platform.WINDOWS:
 # --------------------------------------------------------------------
 # Disk models for different platforms (used internally)
 # --------------------------------------------------------------------
-Disk = namedtuple('Disk', 'root, free_bytes')
+Disk = namedtuple('Disk', 'root, free_bytes, capacity_bytes')
 
 class WindowsDisk(Disk):
     __slots__ = ()
@@ -25,8 +25,13 @@ class WindowsDisk(Disk):
     @classmethod
     def from_wmi_object(cls, wmi_object):
         free_bytes = int(wmi_object.freespace)
+        capacity_bytes = int(wmi_object.size)
         root = wmi_object.caption
-        return cls(root=root, free_bytes=free_bytes)
+        return cls(
+            root=root,
+            free_bytes=free_bytes,
+            capacity_bytes=capacity_bytes
+        )
 
 
 class LinuxDisk(Disk):
@@ -37,8 +42,14 @@ class LinuxDisk(Disk):
         stat_result = os.statvfs(path)
         free_blocks = stat_result.f_bfree
         free_bytes = free_blocks * stat_result.f_bsize
+        capacity_blocks = stat_result.f_blocks
+        capacity_bytes = capacity_blocks * stat_result.f_bsize
         root = cls._find_mount_point(path)
-        return cls(root=root, free_bytes=free_bytes)
+        return cls(
+            root=root,
+            free_bytes=free_bytes,
+            capacity_bytes=capacity_bytes
+        )
 
     @staticmethod
     def _find_mount_point(path):
@@ -60,6 +71,11 @@ class AbstractDiskManagement(ABC):
 
 
 class WinDiskManagement(AbstractDiskManagement):
+
+    def get_capacity(self, path):
+        for disk in self._enumerate_disks():
+            if disk.root == self._get_drive_prefix(path):
+                return int(disk.capacity_bytes)
 
     def get_free_space(self, path):
         for disk in self._enumerate_disks():
@@ -89,6 +105,10 @@ class WinDiskManagement(AbstractDiskManagement):
 
 
 class WslDiskManagement(AbstractDiskManagement):
+
+    @staticmethod
+    def get_capacity(path):
+        return LinuxDisk.from_path(path).capacity_bytes
 
     @staticmethod
     def get_free_space(path):
