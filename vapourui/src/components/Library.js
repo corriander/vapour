@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import Modal from '@material-ui/core/Modal';
 import Accordion from './Accordion'
 import LibraryChart from './LibraryChart'
 import LibraryTable from './LibraryTable'
+import GameModal from './GameModal'
 
 import { useQuery } from 'react-query';
 import { getGames } from '../services/libraryService';
@@ -20,7 +22,7 @@ export default function Library(props) {
     // a compile failure because games doesn't exist when we try to .map
     const humanisedGames = React.useMemo(() => {
       return isLoading ? [] : games.map(obj => ({ ...obj, size: gebify(obj.size) }))
-    }, [games]);
+    }, [games, isLoading]);
 
     useEffect(() => {
       setData(humanisedGames.map(obj => ({ ...obj, hasFocus: false})))
@@ -32,13 +34,18 @@ export default function Library(props) {
 
     return (
       <Accordion title={props.path}>
-        <LibraryChart id={props.id} free={gebify(props.free)} threshold={threshold} data={data}/>
+        <LibraryChart id={props.id} free={gebify(props.free)} threshold={threshold} data={data} selectHandler={setFocus}/>
         <LibraryTable libraryId={props.id} data={data} selectHandler={setFocus}/>
+        <Modal
+          open={focus !== null}
+          onClose={() => setFocus(null)}
+          aria-labelledby="game-modal-title"
+          aria-describedby="game-modal-description"
+        >
+          <div>
+            <GameModal id={focus}/>
+          </div>
+        </Modal>
       </Accordion>
     )
 }
-
-function humanise(size) {
-    var i = Math.floor( Math.log(size) / Math.log(1024) );
-    return ( size / Math.pow(1024, i) ).toFixed(2) * 1 + ' ' + ['B', 'kiB', 'MiB', 'GiB', 'TiB'][i];
-};

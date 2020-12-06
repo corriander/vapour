@@ -10,9 +10,10 @@ am4core.useTheme(am4themes_animated);
 export default function LibraryChart(props) {
     const chart = useRef(null);
     const divId = "chartdiv-" + props.id
-    const freeSlice = {name: "Remaining", size: props.free}
+
 
     useEffect(() => {
+        const freeSlice = {name: "Remaining", size: props.free}
 
         let x = am4core.create(divId, am4charts.PieChart);
 
@@ -88,6 +89,7 @@ export default function LibraryChart(props) {
                     item.isActive = false;
                 }
             })
+            props.selectHandler(e.target.dataItem.dataContext.id)
         });
 
         bgSeries.labels.events.on("ready", labelsReady);
@@ -115,7 +117,7 @@ export default function LibraryChart(props) {
         return () => {
             x.dispose();
         };
-    }, [props.data]);
+    }, [props.data, divId, props.free, props.threshold]);
 
     // When the paddingRight prop changes the chart will update
     useEffect(() => {

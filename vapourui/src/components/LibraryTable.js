@@ -11,6 +11,7 @@ import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 import TableSortLabel from "@material-ui/core/TableSortLabel";
 
+
 const useStyles = makeStyles((theme) => ({
   root: {
     width: '100%',
@@ -71,7 +72,6 @@ export default function LibraryTable({ data, selectHandler }) {
       columns,
       data,
       autoResetSelectedRows: false,
-      manualRowSelectedKey: 'hasFocus'
     }, useSortBy, useRowSelect);
 
     const handleClick = (event, row) => {
