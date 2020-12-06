@@ -47,7 +47,7 @@ export default function GameModal (props) {
                   <img className={classes.image} alt={data.name} src={data.imgUrl}/>
               </a>
             </div>
-            <GameTable id={props.id}/>
+            <GameTable id={props.id} manifestPath={data.manifestPath} installPath={data.installPath} size={data.size}/>
         </div>
       )
 

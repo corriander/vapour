@@ -16,16 +16,15 @@ function humanise(size) {
 };
 
 export default function GameTable (props) {
-  const { data, isLoading, error } = useQuery(["game", props.id], getGame)
   const classes = useStyles();
 
   return (
     <table className={classes.table}>
       <tbody>
-        <tr><th>AppID</th><td>{data.id}</td></tr>
-        <tr><th>Manifest</th><td>{data.manifestPath}</td></tr>
-        <tr><th>Install</th><td>{data.installPath}</td></tr>
-        <tr><th>Size</th><td>{humanise(data.size)}</td></tr>
+      <tr><th>AppID</th><td>{props.id}</td></tr>
+        <tr><th>Manifest</th><td>{props.manifestPath}</td></tr>
+        <tr><th>Install</th><td>{props.installPath}</td></tr>
+        <tr><th>Size</th><td>{humanise(props.size)}</td></tr>
       </tbody>
      </table>
   )
