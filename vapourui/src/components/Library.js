@@ -6,11 +6,11 @@ import LibraryTable from './LibraryTable'
 import GameModal from './GameModal'
 
 import { useQuery } from 'react-query';
-import { getGames } from '../services/libraryService';
+import { getLibraryGames } from '../services/libraryService';
 
 
 export default function Library(props) {
-    const { data: games, isLoading } = useQuery(["librarygames", props.id], getGames);
+    const { data: games, isLoading } = useQuery(["librarygames", props.id], getLibraryGames);
     const [ focus, setFocus ] = useState(null);
     const [ data, setData ] = useState([]);
 
