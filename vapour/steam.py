@@ -144,9 +144,10 @@ class AppManifest(Model):
         """Steam Application state dictionary."""
         return self._metadata['AppState']
 
-    def archive(self, archive=None):
+    def archive(self, archive=None, safe=True):
         """Copy game data and manifest to the archive."""
-        abort_if_steam_is_running() # TODO: Necessary?
+        if safe:
+            abort_if_steam_is_running() # TODO: Necessary?
 
         if archive is None:
             archive = Archive() # Use the default
