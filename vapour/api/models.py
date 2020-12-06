@@ -22,6 +22,8 @@ class Game(BaseModel):
     manifest_path: str
     install_path: str
     size: int
+    store_url: str
+    img_url: str
 
 
 class Library(BaseModel):

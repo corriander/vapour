@@ -69,6 +69,8 @@ class AppManifest(Model):
         'manifest_path',
         'install_path',
         'size',
+        'store_url',
+        'img_url',
     )
 
     def __init__(self, path, lib=None):
@@ -106,6 +108,10 @@ class AppManifest(Model):
             return self._state['InstallDir']
 
     @property
+    def img_url(self):
+        return f'https://cdn.cloudflare.steamstatic.com/steam/apps/{self.id}/header.jpg'
+
+    @property
     def install_path(self):
         if self.lib is None or not isinstance(self.lib, Archive):
             root_dir = os.path.join(os.path.dirname(self.path), 'common')
@@ -128,6 +134,10 @@ class AppManifest(Model):
     @property
     def size(self):
         return int(self._state['SizeOnDisk'])
+
+    @property
+    def store_url(self):
+        return f'https://store.steampowered.com/app/{self.id}'
 
     @property
     def _state(self):
