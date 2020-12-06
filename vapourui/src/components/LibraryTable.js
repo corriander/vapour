@@ -71,7 +71,7 @@ export default function LibraryTable({ data, selectHandler }) {
     } = useTable({
       columns,
       data,
-      autoResetSelectedRows: false,
+      initialState: { hiddenColumns: ['id']},
     }, useSortBy, useRowSelect);
 
     const handleClick = (event, row) => {

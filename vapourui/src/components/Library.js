@@ -25,10 +25,6 @@ export default function Library(props) {
     }, [games, isLoading]);
 
     useEffect(() => {
-      setData(humanisedGames.map(obj => ({ ...obj, hasFocus: false})))
-    }, [humanisedGames, focus])
-
-    useEffect(() => {
       setData(humanisedGames.map(game => ({ ...game, hasFocus: (game.id == focus)})))
     }, [focus, humanisedGames])
 
