@@ -32,8 +32,10 @@ export default function Library(props) {
       setData(humanisedGames.map(game => ({ ...game, hasFocus: (game.id == focus)})))
     }, [focus, humanisedGames])
 
+    const title = <span><i className="fas fa-book-open"></i>  {props.path}</span>
+
     return (
-      <Accordion title={props.path}>
+      <Accordion title={title}>
         <LibraryChart id={props.id} free={gebify(props.free)} threshold={threshold} data={data} selectHandler={setFocus}/>
         <LibraryTable libraryId={props.id} data={data} selectHandler={setFocus}/>
         <Modal
@@ -43,7 +45,7 @@ export default function Library(props) {
           aria-describedby="game-modal-description"
         >
           <div>
-            <GameModal id={focus}/>
+            <GameModal id={focus} gameType="game"/>
           </div>
         </Modal>
       </Accordion>

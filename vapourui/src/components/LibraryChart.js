@@ -9,7 +9,7 @@ am4core.useTheme(am4themes_animated);
 
 export default function LibraryChart(props) {
     const chart = useRef(null);
-    const divId = "chartdiv-" + props.id
+    const divId = "piechartdiv-" + props.id
 
 
     useEffect(() => {
