@@ -27,7 +27,7 @@ export default function Archive(props) {
     return (
       <Accordion title={title}>
         <ArchiveChart id={props.id} size={props.size} free={props.free} maxSize={props.maxSize}/>
-        <LibraryTable libraryId={props.id} data={games} selectHandler={setFocus}/>
+        <LibraryTable libraryId={props.id} data={humanisedGames} selectHandler={setFocus}/>
         <Modal
           open={focus !== null}
           onClose={() => setFocus(null)}

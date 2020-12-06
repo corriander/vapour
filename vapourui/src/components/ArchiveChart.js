@@ -88,7 +88,7 @@ export default function ArchiveChart(props) {
     }, [props.paddingRight]);
 
     return (
-        <div id={divId} style={{ width: "100%", height: "500px" }}></div>
+        <div id={divId} style={{ width: "90%", height: "200px" }}></div>
     );
 }
 
