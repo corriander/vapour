@@ -34,6 +34,7 @@ import re
 import glob
 import math
 import shutil
+import subprocess
 import textwrap
 import warnings
 
@@ -76,8 +77,19 @@ class AppManifest(Model):
     def __init__(self, path, lib=None):
         self.path = path
         self.lib = lib
-        with open(path, 'r') as f:
-            self._metadata = vdf.load(f)
+        try:
+            with open(path, 'r') as f:
+                self._metadata = vdf.load(f)
+        except PermissionError:
+            # WSL bug: Manifest unreadable
+            self._metadata = {
+                'AppState': {
+                    'appid': int(re.search(r'(\d+).acf', path).groups()[0]),
+                    'installdir': '<unreadable>',
+                    'name': '<unreadable>',
+                    'SizeOnDisk': '0',
+                }
+            }
 
     @property
     def manifest_path(self):
@@ -152,31 +164,8 @@ class AppManifest(Model):
         if archive is None:
             archive = Archive() # Use the default
 
-        self._archive_manifest(archive)
-        try:
-            self._archive_install_files(archive)
-        except:
-            self._backout__delete_manifest(archive)
-            raise IOError("Archiving failed.")
-
-    def _archive_manifest(self, archive):
-        src = self.path
-        dst = os.path.join(archive.path,
-                           os.path.basename(self.path))
-        shutil.copyfile(src, dst)
-
-    def _archive_install_files(self, archive):
-        src = self.install_path
-        dst = os.path.join(archive.path,
-                           os.path.basename(self.install_path))
-        shutil.copytree(src, dst)
-
-    def _backout__delete_manifest(self, archive):
-        archived_manifest_path = os.path.join(
-            archive.path,
-            os.path.basename(self.path)
-        )
-        os.remove(archived_manifest_path)
+        archiver = Archiver()
+        archiver.archive(self, archive)
 
     def inspect_size(self):
         """Inspect the size of the game installation.
@@ -764,6 +753,54 @@ class Archive(Library):
                            installdir)
         dst = os.path.join(lib.install_path, installdir)
         shutil.copytree(src, dst)
+
+
+class Archiver(object):
+    """Archives a game.
+    """
+
+    @classmethod
+    def _copy(cls, source, destination):
+        try:
+            cls._rsync(source, destination)
+        except FileNotFoundError:
+            shutil.copytree(source, destination, dirs_exist_ok=True)
+
+    @staticmethod
+    def _rsync(source, destination):
+        result = subprocess.run(
+            ['rsync', '-azP', source, destination],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        result.check_returncode()
+        return result
+
+    def archive(self, game, archive):
+        """Copy game data and manifest to the archive."""
+        self._archive_manifest(game, archive)
+        try:
+            self._archive_install_files(game, archive)
+        except:
+            self._backout__delete_manifest(game, archive)
+            raise Exception("Archiving failed.")
+
+    @classmethod
+    def _archive_manifest(cls, game, archive):
+        cls._copy(game.path, archive.path)
+
+    @classmethod
+    def _archive_install_files(cls, game, archive):
+        cls._copy(game.install_path, archive.path)
+
+    @staticmethod
+    def _backout__delete_manifest(game, archive):
+        archived_manifest_path = os.path.join(
+            archive.path,
+            os.path.basename(game.path)
+        )
+        os.remove(archived_manifest_path)
+
 
 # --------------------------------------------------------------------
 #
