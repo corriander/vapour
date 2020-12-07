@@ -22,7 +22,7 @@ export default function Archive(props) {
       return isLoading ? [] : games.map(obj => ({ ...obj, size: gebify(obj.size) }))
     }, [games, isLoading]);
 
-    const title = <span><i class="fas fa-archive"></i>  {props.path}</span>
+    const title = <span><i className="fas fa-archive"></i>  {props.path}</span>
 
     return (
       <Accordion title={title}>
