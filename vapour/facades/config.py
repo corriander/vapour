@@ -47,3 +47,11 @@ class Settings(object):
             return self._data['collections']
         except KeyError:
             return []
+
+    @property
+    def system(self):
+        """Dictionary describing system configuration."""
+        try:
+            return self._data['system']
+        except KeyError:
+            return dict()

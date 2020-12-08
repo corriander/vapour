@@ -59,9 +59,20 @@ class Model(abc.ABC):
             yield (key, getattr(self, key))
 
 
+class AppInstance(Model):
+    """Models a game in a library or archive.
+
+    A game is a steam app with a manifest and installed data.
+    """
+
+    def __init__(self, manifest_path, collection=None):
+        self.manifest_path = manifest_path
+        self.collection = collection
+
+
 # NOTE: It might be more semantically accurate to call this a game.
 #       It's OK for a game to be built from an AppManifest...
-class AppManifest(Model):
+class AppManifest(AppInstance):
     """Encapsulation of metadata in appmanifest ACF."""
 
     data_attributes = (
@@ -75,8 +86,7 @@ class AppManifest(Model):
     )
 
     def __init__(self, path, lib=None):
-        self.path = path
-        self.lib = lib
+        super().__init__(manifest_path=path, collection=lib)
         try:
             with open(path, 'r') as f:
                 self._metadata = vdf.load(f)
@@ -92,8 +102,15 @@ class AppManifest(Model):
             }
 
     @property
-    def manifest_path(self):
-        return self.path
+    def lib(self):
+        # Backwards compat; wraps the newer generic collection attr
+        return self.collection
+
+    @property
+    def path(self):
+        # Backwards compat; wraps the newer manifest_path attr
+        # There was a manifest_path property returning the path.
+        return self.manifest_path
 
     @property
     def archive_path(self):
@@ -164,7 +181,7 @@ class AppManifest(Model):
         if archive is None:
             archive = Archive() # Use the default
 
-        archiver = Archiver()
+        archiver = Archivist()
         archiver.archive(self, archive)
 
     def inspect_size(self):
@@ -607,6 +624,38 @@ class Library(Model):
                                         self.path)
 
 
+class SteamApp(object):
+    """Models a steam application / game present on the system.
+
+    An may be installed and/or archived once.
+    """
+    def __init__(self, installed_instance, archived_instance):
+        if installed_instance is None and archived_instance is None:
+            msg = "Must supply one of installed or archived copy!"
+            raise TypeError(msg)
+        self.installed_instance = installed_instance
+        self.archived_instance = archived_instance
+
+    @classmethod
+    def from_app_id(cls, app_id):
+        """Instantiate an installed or archived game.
+
+        Returns
+        -------
+
+        SteamApp
+        """
+        installed = Librarian().search_libraries(app_id)
+        archived = Archivist().search_archives(app_id)
+        return cls(installed, archived)
+
+    def __getattr__(self, attr):
+        try:
+            return getattr(self.installed_instance, attr)
+        except AttributeError:
+            return getattr(self.archived_instance, attr)
+
+
 class Archive(Library):
 
     data_attributes = Library.data_attributes + ('max_size',)
@@ -755,9 +804,94 @@ class Archive(Library):
         shutil.copytree(src, dst)
 
 
-class Archiver(object):
-    """Archives a game.
+class Librarian(object):
+    """Responsible for managing installed games.
     """
+
+    @staticmethod
+    def get_libraries():
+        return get_libraries()
+
+    def search_libraries(self, app_id):
+        """Search libraries for a game.
+
+        Returns
+        -------
+
+        Match or None (it is assumed steam handles duplication)
+        """
+        for library in self.get_libraries():
+            for game in library.games:
+                if game.id == app_id:
+                    return game
+
+
+class Archivist(object):
+    """Responsible for managing archived games.
+    """
+
+    def archive(self, game, archive):
+        """Copy game data and manifest to the archive."""
+        self._archive_manifest(game, archive)
+        try:
+            self._archive_install_files(game, archive)
+        except:
+            self._backout__delete_manifest(game, archive)
+            raise Exception("Archiving failed.")
+
+    def search_archives(self, app_id):
+        """Search archives for a copy of a game.
+
+        Returns
+        -------
+
+        The first match or None.
+
+        Raises
+        ------
+
+        Warning
+            If more than one match.
+        """
+        matches = [
+            item
+            for archive in self.get_archives()
+            for item in archive.games
+            if item.id == app_id
+        ]
+        match = None
+        if matches:
+            if len(matches) > 1:
+                msg = (f"More than one copy of Game "
+                        "with {app_id} in archives")
+                warnings.warn(msg)
+            match = matches[0]
+        return match
+
+    @staticmethod
+    def get_archives():
+        """Get a list of archives."""
+        return get_archives()
+
+    def get_archive(self, archive_id):
+        """Get an archive by derived ID."""
+        return dict(enumerate(self.get_archives()))[archive_id]
+
+    @classmethod
+    def _archive_manifest(cls, game, archive):
+        cls._copy(game.path, archive.path)
+
+    @classmethod
+    def _archive_install_files(cls, game, archive):
+        cls._copy(game.install_path, archive.path)
+
+    @staticmethod
+    def _backout__delete_manifest(game, archive):
+        archived_manifest_path = os.path.join(
+            archive.path,
+            os.path.basename(game.path)
+        )
+        os.remove(archived_manifest_path)
 
     @classmethod
     def _copy(cls, source, destination):
@@ -776,31 +910,6 @@ class Archiver(object):
         result.check_returncode()
         return result
 
-    def archive(self, game, archive):
-        """Copy game data and manifest to the archive."""
-        self._archive_manifest(game, archive)
-        try:
-            self._archive_install_files(game, archive)
-        except:
-            self._backout__delete_manifest(game, archive)
-            raise Exception("Archiving failed.")
-
-    @classmethod
-    def _archive_manifest(cls, game, archive):
-        cls._copy(game.path, archive.path)
-
-    @classmethod
-    def _archive_install_files(cls, game, archive):
-        cls._copy(game.install_path, archive.path)
-
-    @staticmethod
-    def _backout__delete_manifest(game, archive):
-        archived_manifest_path = os.path.join(
-            archive.path,
-            os.path.basename(game.path)
-        )
-        os.remove(archived_manifest_path)
-
 
 # --------------------------------------------------------------------
 #
@@ -808,11 +917,13 @@ class Archiver(object):
 #
 # --------------------------------------------------------------------
 def get_archives():
+    # DEPRECATION: Use Archivist.get_archives()
     return [Archive(path) for path in PATH_ARCHIVE]
 
 
 def get_libraries():
     """Steam library factory."""
+    # DEPRECATED: Use Librarian.get_libraries()
     lib_paths = [get_steam_path()]
     idx_path = os.path.join(lib_paths[0], FILENAME_LIBRARY_FOLDERS)
     with open(idx_path, 'r') as f:

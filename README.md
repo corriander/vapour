@@ -27,6 +27,17 @@ Usage
 	uvicorn vapour.api.main:app --reload
 	http://127.0.0.1:8000/docs
 
+### Redis & Dramatiq
+
+Redis is used as a message broker for archive requests via the React UI.
+
+	sudo service redis start
+
+Dramatiq is used for worker threads responsible for handling messages posted to the queue
+
+	dramatiq vapour.workers
+
+
 ### Library Management
 
 Archiving and removing a game from the steam library to make space for
@@ -65,8 +76,8 @@ output as this contains everything we need to derive the rest.
 In Git Bash:
 
 	for f in *frametimes.csv
-	do 
-		echo "SELECT fraps.import_frames('"$(pwd | sed 's#^/\([a-zA-Z]\)#\1:#')"/$f');" 
+	do
+		echo "SELECT fraps.import_frames('"$(pwd | sed 's#^/\([a-zA-Z]\)#\1:#')"/$f');"
 	done | psql -d gameadmin
 
 

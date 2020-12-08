@@ -3,6 +3,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import { useQuery } from "react-query";
 import { getGame, getArchivedGame } from "../services/libraryService";
 import GameTable from "./GameTable";
+import ArchiveButton from './ArchiveButton';
 
 function getModalStyle() {
   return {
@@ -59,6 +60,7 @@ export default function GameModal (props) {
               </a>
             </div>
             <GameTable id={props.id} manifestPath={data.manifestPath} installPath={data.installPath} size={data.size}/>
+            <ArchiveButton appId={props.id} archiveId={1} gameType={props.gameType}/>
         </div>
       )
 

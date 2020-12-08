@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .. import steam
+from .. import steam, workers
 from .models import Library, Game, Archive
 
 app = FastAPI()
@@ -41,6 +41,10 @@ def read_archives():
 def read_archive_games(archive_id: int):
     return [Game(**dict(game)) for game in steam.archives[archive_id].games]
 
+@app.put("/archives/{archive_id}/games/{app_id}", status_code=202)
+def archive_game(archive_id: int, app_id: int):
+    """Archive a game."""
+    workers.archive_steam_app.send(archive_id, app_id)
 
 @app.get("/libraries/{library_id}/games/")
 def read_library_games(library_id: int):
