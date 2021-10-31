@@ -1,4 +1,5 @@
 import platform
+import re
 from enum import Enum
 
 
@@ -38,7 +39,8 @@ class Platform(Enum):
             this_platform = cls.WINDOWS
 
         elif platform_system == 'Linux':
-            if 'Microsoft' in platform.release():
+            # WSL1 has Microsoft in the release desc, WSL2 microsoft
+            if re.search(r'[mM]icrosoft', platform.release()):
                 this_platform = cls.WSL
 
             else:
