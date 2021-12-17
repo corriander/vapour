@@ -37,6 +37,8 @@ import shutil
 import textwrap
 import warnings
 
+from typing import List
+
 import humanize
 import vdf
 
@@ -618,6 +620,75 @@ class Library(Model):
                                         self.path)
 
 
+class SteamApp(object):
+    """Models a steam application / game present on the system.
+
+    An may be installed and/or archived once.
+    """
+    def __init__(self, installed_instance, archived_instance):
+        if installed_instance is None and archived_instance is None:
+            msg = "Must supply one of installed or archived copy!"
+            raise TypeError(msg)
+        self.installed_instance = installed_instance
+        self.archived_instance = archived_instance
+
+    @classmethod
+    def from_app_id(cls, app_id):
+        """Instantiate an installed or archived game.
+
+        Returns
+        -------
+
+        SteamApp
+        """
+        installed = Librarian().search_libraries(app_id)
+        archived = Archivist().search_archives(app_id)
+        return cls(installed, archived)
+
+    @classmethod
+    def from_archived_manifest(cls, manifest_path, archive):
+        archived_instance = AppManifest(manifest_path, archive)
+        installed_instance = Librarian().search_libraries(archived_instance.id)
+        return cls(installed_instance, archived_instance)
+
+    @classmethod
+    def from_installed_manifest(cls, manifest_path, library):
+        installed_instance = AppManifest(manifest_path, library)
+        archived_instance = Archivist().search_archives(installed_instance.id)
+        return cls(installed_instance, archived_instance)
+
+    @property
+    def is_archived(self) -> bool:
+        return self.archived_instance is not None
+
+    @property
+    def archive_is_current(self) -> bool:
+        # Not implemented
+        return self.is_archived and False
+
+    def __getattr__(self, attr):
+        try:
+            return getattr(self.installed_instance, attr)
+        except AttributeError:
+            return getattr(self.archived_instance, attr)
+
+
+
+
+#class ArchivedGame(AppInstance):
+#
+#	data_attributes = ()
+#
+#	@classmethod
+#	def from_library_manifest(cls, manifest_path, lib=None):
+#		archived_game = cls(manifest_path=None, container=None)
+#		archived_game.installed_instance = AppManifest(manifest_path, lib)
+#		if archived_game.installed_instance.archived_instance is None:
+#
+#		return archived_game
+
+
+
 class Archive(Library):
 
     data_attributes = Library.data_attributes + ('max_size',)
@@ -765,6 +836,147 @@ class Archive(Library):
         dst = os.path.join(lib.install_path, installdir)
         shutil.copytree(src, dst)
 
+
+class Librarian(object):
+    """Responsible for managing installed games.
+    """
+
+    @staticmethod
+    def get_libraries():
+        idx = LibraryFolders()
+        lib_paths = idx.get_library_paths()
+        return list(map(Library, lib_paths))
+
+    def search_libraries(self, app_id):
+        """Search libraries for a game.
+
+        Returns
+        -------
+
+        Match or None (it is assumed steam handles duplication)
+        """
+        for library in self.get_libraries():
+            for game in library.games:
+                if game.id == app_id:
+                    return game
+
+
+class Archivist(object):
+    """Responsible for managing archived games.
+    """
+
+    def archive(self, game, archive):
+        """Copy game data and manifest to the archive."""
+        self._archive_manifest(game, archive)
+        try:
+            self._archive_install_files(game, archive)
+        except:
+            self._backout__delete_manifest(game, archive)
+            raise Exception("Archiving failed.")
+
+    def search_archives(self, app_id):
+        """Search archives for a copy of a game.
+
+        Returns
+        -------
+
+        The first match or None.
+
+        Raises
+        ------
+
+        Warning
+            If more than one match.
+        """
+        matches = [
+            item
+            for archive in self.get_archives()
+            for item in archive.games
+            if item.id == app_id
+        ]
+        match = None
+        if matches:
+            if len(matches) > 1:
+                msg = (f"More than one copy of Game "
+                        "with {app_id} in archives")
+                warnings.warn(msg)
+            match = matches[0]
+        return match
+
+    @staticmethod
+    def get_archives():
+        """Get a list of archives."""
+        return get_archives()
+
+    def get_archive(self, archive_id):
+        """Get an archive by derived ID."""
+        return dict(enumerate(self.get_archives()))[archive_id]
+
+    @classmethod
+    def _archive_manifest(cls, game, archive):
+        cls._copy(game.path, archive.path)
+
+    @classmethod
+    def _archive_install_files(cls, game, archive):
+        cls._copy(game.install_path, archive.path)
+
+    @staticmethod
+    def _backout__delete_manifest(game, archive):
+        archived_manifest_path = os.path.join(
+            archive.path,
+            os.path.basename(game.path)
+        )
+        os.remove(archived_manifest_path)
+
+    @classmethod
+    def _copy(cls, source, destination):
+        try:
+            cls._rsync(source, destination)
+        except FileNotFoundError:
+            shutil.copytree(source, destination, dirs_exist_ok=True)
+
+    @staticmethod
+    def _rsync(source, destination):
+        result = subprocess.run(
+            ['rsync', '-azP', source, destination],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        result.check_returncode()
+        return result
+
+
+class LibraryFolders(object):
+    """Model for the current Steam libraryfolders.vdf"""
+
+    root_key = 'libraryfolders'
+    path_key = 'path'
+
+    @property
+    def path(self) -> str:
+        return os.path.join(get_steam_path(), FILENAME_LIBRARY_FOLDERS)
+
+    def parse(self) -> dict:
+        with open(self.path, 'r') as f:
+            return vdf.load(f)[self.root_key]
+
+    def get_library_paths(self) -> List[str]:
+        metadata = self.parse()
+        lib_paths = []
+        i = 0
+        while True:
+            try:
+                path = metadata[str(i)][self.path_key]
+                lib_paths.append(DiskManagement.translate_path(path))
+            except KeyError:
+                # No more lib indexes in metadata
+                break
+            else:
+                i += 1
+
+        return lib_paths
+
+
 # --------------------------------------------------------------------
 #
 # Functions
@@ -776,10 +988,21 @@ def get_archives():
 
 def get_libraries():
     """Steam library factory."""
+    # DEPRECATED: Use Librarian.get_libraries()
+    legacy_idx = False
     lib_paths = [get_steam_path()]
     idx_path = os.path.join(lib_paths[0], FILENAME_LIBRARY_FOLDERS)
-    with open(idx_path, 'r') as f:
-        dct = vdf.load(f)['LibraryFolders']
+
+    def read_libraryfolders(idx_path, key):
+        with open(idx_path, 'r') as f:
+            return vdf.load(f)[key]
+        return dct
+
+    try:
+        dct = read_libraryfolders(idx_path, 'libraryfolders')
+    except KeyError:
+        dct = read_libraryfolders(idx_path, 'LibraryFolders')
+        legacy_idx = True
 
     i = 1
     while True:
@@ -792,6 +1015,7 @@ def get_libraries():
         i += 1
 
     return list(map(Library, lib_paths))
+
 
 
 def same_partition(path1, path2):
@@ -834,7 +1058,7 @@ def get_directory_size(path):
 
 
 def locate_game(regex):
-    libs = get_libraries()
+    libs = Librarian.get_libraries()
     return [lib for lib in libs if lib.select(regex)]
 
 
@@ -877,6 +1101,6 @@ def steam_is_running():
 # Data
 #
 # --------------------------------------------------------------------
-libs = get_libraries()
+libs = Librarian().get_libraries()
 
 archives = get_archives()
