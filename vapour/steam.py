@@ -43,7 +43,7 @@ from typing import List
 import humanize
 import vdf
 
-from .facades import Steam, DiskManagement, Settings
+from .facades import Steam, DiskManagement, Settings, LoggingMixin
 
 
 PATH_ARCHIVE = Settings().collections['archives']
@@ -830,18 +830,22 @@ class Librarian(object):
                     return game
 
 
-class Archivist(object):
+class Archivist(LoggingMixin, object):
     """Responsible for managing archived games.
     """
 
     def archive(self, game, archive):
         """Copy game data and manifest to the archive."""
+        self.log.info(f"Begin archiving {game.name}")
         self._archive_manifest(game, archive)
         try:
             self._archive_install_files(game, archive)
         except:
             self._backout__delete_manifest(game, archive)
+            self.log.error(f"Archiving {game.name} failed")
             raise Exception("Archiving failed.")
+        else:
+            self.log.info(f"Successfully archived {game.name}")
 
     def search_archives(self, app_id):
         """Search archives for a copy of a game.
