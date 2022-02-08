@@ -38,6 +38,8 @@ import subprocess
 import textwrap
 import warnings
 
+from typing import List
+
 import humanize
 import vdf
 
@@ -810,7 +812,9 @@ class Librarian(object):
 
     @staticmethod
     def get_libraries():
-        return get_libraries()
+        idx = LibraryFolders()
+        lib_paths = idx.get_library_paths()
+        return list(map(Library, lib_paths))
 
     def search_libraries(self, app_id):
         """Search libraries for a game.
@@ -911,6 +915,37 @@ class Archivist(object):
         return result
 
 
+class LibraryFolders(object):
+    """Model for the current Steam libraryfolders.vdf"""
+
+    root_key = 'libraryfolders'
+    path_key = 'path'
+
+    @property
+    def path(self) -> str:
+        return os.path.join(get_steam_path(), FILENAME_LIBRARY_FOLDERS)
+
+    def parse(self) -> dict:
+        with open(self.path, 'r') as f:
+            return vdf.load(f)[self.root_key]
+
+    def get_library_paths(self) -> List[str]:
+        metadata = self.parse()
+        lib_paths = []
+        i = 0
+        while True:
+            try:
+                path = metadata[str(i)][self.path_key]
+                lib_paths.append(DiskManagement.translate_path(path))
+            except KeyError:
+                # No more lib indexes in metadata
+                break
+            else:
+                i += 1
+
+        return lib_paths
+
+
 # --------------------------------------------------------------------
 #
 # Functions
@@ -982,7 +1017,7 @@ def get_directory_size(path):
 
 
 def locate_game(regex):
-    libs = get_libraries()
+    libs = Librarian.get_libraries()
     return [lib for lib in libs if lib.select(regex)]
 
 
@@ -1025,6 +1060,6 @@ def steam_is_running():
 # Data
 #
 # --------------------------------------------------------------------
-libs = get_libraries()
+libs = Librarian().get_libraries()
 
 archives = get_archives()
