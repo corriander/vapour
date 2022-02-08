@@ -6,7 +6,7 @@ from enum import Enum
 
 import psutil # NOTE: multi-platform but not used here for wsl
 
-from .config import Settings
+from .config import ConfigMixin
 from .environment import Platform
 
 PLATFORM = Platform.detect()
@@ -46,9 +46,7 @@ class WindowsContext(AbstractOperatingSystemContext):
 # --------------------------------------------------------------------
 # Supported Apps
 # --------------------------------------------------------------------
-class App(ABC):
-
-    settings = Settings()
+class App(ABC, ConfigMixin):
 
     @property
     def install_path(self):
@@ -61,15 +59,6 @@ class App(ABC):
         except AttributeError:
             self._os_context = OperatingSystemContext()
             return self._os_context
-
-    @property
-    def config(self):
-        """Dictionary of app-specific settings.
-
-        Contains things like hardcoded installation paths, etc.
-        """
-        config = self.settings.apps_config
-        return config[self.__class__.__name__]
 
     def is_running(self, case_sensitive=True):
         this_process = self.process_name

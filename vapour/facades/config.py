@@ -55,3 +55,17 @@ class Settings(object):
             return self._data['system']
         except KeyError:
             return dict()
+
+
+class ConfigMixin(object):
+
+    settings = Settings()
+
+    @property
+    def config(self) -> dict:
+        """Dictionary of app-specific settings.
+
+        Contains things like hardcoded installation paths, etc.
+        """
+        config = self.settings.apps_config
+        return config.get(self.__class__.__name__, {})
