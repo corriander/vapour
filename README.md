@@ -31,7 +31,7 @@ Usage
 
 Redis is used as a message broker for archive requests via the React UI.
 
-	sudo service redis start
+	sudo service redis-server start
 
 Dramatiq is used for worker threads responsible for handling messages posted to the queue
 
