@@ -21,7 +21,7 @@ class Settings(object):
 
     path = os.path.join(
         xdg.XDG_CONFIG_HOME,
-        'gameadmin',
+        'vapour',
         'settings.json'
     )
 
