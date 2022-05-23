@@ -51,6 +51,13 @@ export default function GameModal (props) {
       if (isLoading) return "Loading...";
       if (error) return "Oops!";
 
+      //const disabled_archive_button = <Button variant="contained" disabled>
+      //    Archive
+      //  </Button>
+      //const archive_button = <Button variant="contained" color="primary" href={`${process.env.REACT_APP_API_BASE_URL}/archives/1/games/${props.id}`}>
+      //    Archive
+      //  </Button>
+
       return (
         <div style={modalStyle} className={classes.paper}>
             <h2 id="game-modal-title">{data.name}</h2>
@@ -60,7 +67,8 @@ export default function GameModal (props) {
               </a>
             </div>
             <GameTable id={props.id} manifestPath={data.manifestPath} installPath={data.installPath} size={data.size}/>
-            <ArchiveButton appId={props.id} archiveId={1} gameType={props.gameType}/>
+            {/*props.gameType === 'game' ? archive_button : disabled_archive_button*/}
+            <ArchiveButton appId={props.id} archiveId={0} gameType={props.gameType}/>
         </div>
       )
 
