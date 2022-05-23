@@ -44,13 +44,15 @@ import humanize
 import vdf
 
 from .facades import Steam, DiskManagement, Settings, LoggingMixin
+from .facades import clone_tool
 
 
 PATH_ARCHIVE = Settings().collections['archives']
 
 FILENAME_LIBRARY_FOLDERS = 'steamapps/libraryfolders.vdf'
 
-class Model(abc.ABC):
+
+class Model(abc.ABC, LoggingMixin):
 
     @abc.abstractproperty
     def data_attributes(self):
@@ -193,7 +195,10 @@ class AppManifest(AppInstance):
         reported by the app manifest and the real size on disk (e.g.
         missing or extra data).
         """
-        return get_directory_size(self.install_path)
+        try:
+            return get_directory_size(self.install_path)
+        except:
+            return 0
 
     def move(self, dst, force=False, fast=False):
         """Move game data to a new library."""
@@ -274,6 +279,12 @@ class AppManifest(AppInstance):
 
     def __eq__(self, other):
         return self._metadata == other._metadata
+
+    def __str__(self):
+        return f"<{type(self).__name__}: {self.name}>"
+
+    def __repr__(self):
+        return str(self)
 
 
 class Library(Model):
@@ -651,11 +662,48 @@ class SteamApp(object):
         archived = Archivist().search_archives(app_id)
         return cls(installed, archived)
 
+    @classmethod
+    def from_archived_manifest(cls, manifest_path, archive):
+        archived_instance = AppManifest(manifest_path, archive)
+        installed_instance = Librarian().search_libraries(archived_instance.id)
+        return cls(installed_instance, archived_instance)
+
+    @classmethod
+    def from_installed_manifest(cls, manifest_path, library):
+        installed_instance = AppManifest(manifest_path, library)
+        archived_instance = Archivist().search_archives(installed_instance.id)
+        return cls(installed_instance, archived_instance)
+
+    @property
+    def is_archived(self) -> bool:
+        return self.archived_instance is not None
+
+    @property
+    def archive_is_current(self) -> bool:
+        # Not implemented
+        return self.is_archived and False
+
     def __getattr__(self, attr):
         try:
             return getattr(self.installed_instance, attr)
         except AttributeError:
             return getattr(self.archived_instance, attr)
+
+
+
+
+#class ArchivedGame(AppInstance):
+#
+#	data_attributes = ()
+#
+#	@classmethod
+#	def from_library_manifest(cls, manifest_path, lib=None):
+#		archived_game = cls(manifest_path=None, container=None)
+#		archived_game.installed_instance = AppManifest(manifest_path, lib)
+#		if archived_game.installed_instance.archived_instance is None:
+#
+#		return archived_game
+
 
 
 class Archive(Library):
@@ -806,7 +854,7 @@ class Archive(Library):
         shutil.copytree(src, dst)
 
 
-class Librarian(object):
+class Librarian(LoggingMixin, object):
     """Responsible for managing installed games.
     """
 
@@ -903,10 +951,11 @@ class Archivist(LoggingMixin, object):
 
     @classmethod
     def _copy(cls, source, destination):
-        try:
-            cls._rsync(source, destination)
-        except FileNotFoundError:
-            shutil.copytree(source, destination, dirs_exist_ok=True)
+        clone_tool.clone(source, destination)
+        #try:
+        #	cls._rsync(source, destination)
+        #except FileNotFoundError:
+        #	shutil.copytree(source, destination, dirs_exist_ok=True)
 
     @staticmethod
     def _rsync(source, destination):
@@ -963,10 +1012,20 @@ def get_archives():
 def get_libraries():
     """Steam library factory."""
     # DEPRECATED: Use Librarian.get_libraries()
+    legacy_idx = False
     lib_paths = [get_steam_path()]
     idx_path = os.path.join(lib_paths[0], FILENAME_LIBRARY_FOLDERS)
-    with open(idx_path, 'r') as f:
-        dct = vdf.load(f)['LibraryFolders']
+
+    def read_libraryfolders(idx_path, key):
+        with open(idx_path, 'r') as f:
+            return vdf.load(f)[key]
+        return dct
+
+    try:
+        dct = read_libraryfolders(idx_path, 'libraryfolders')
+    except KeyError:
+        dct = read_libraryfolders(idx_path, 'LibraryFolders')
+        legacy_idx = True
 
     i = 1
     while True:
@@ -979,6 +1038,7 @@ def get_libraries():
         i += 1
 
     return list(map(Library, lib_paths))
+
 
 
 def same_partition(path1, path2):
@@ -1009,6 +1069,7 @@ def get_steam_path():
 
 
 def get_directory_size(path):
+    return DiskManagement().get_usage(path)
     # Probably not the fastest implementation:
     #  - https://stackoverflow.com/q/1987119
     #  - https://stackoverflow.com/q/2485719
