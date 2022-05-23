@@ -1,8 +1,8 @@
 """Facades for interacting with Programs"""
+import getpass
 import subprocess
 import os
 from abc import ABC, abstractmethod
-from enum import Enum
 
 import psutil # NOTE: multi-platform but not used here for wsl
 
@@ -28,12 +28,27 @@ class AbstractOperatingSystemContext(ABC):
         """Set of names of running processes."""
         return list(str)
 
+    @property
+    def user(self):
+        return getpass.getuser()
 
 class WslContext(AbstractOperatingSystemContext):
 
     def running_processes(self):
+        return (
+            self._running_processes_winhost().union(
+                self._running_processes_internal()
+            )
+        )
+
+    def _running_processes_winhost(self):
         cmd = "tasklist.exe | awk '{print $1}'"
         bytes_out = subprocess.check_output(cmd, shell=True)
+        return set(bytes_out.decode('utf8').splitlines())
+
+    def _running_processes_internal(self):
+        cmd = ['ps', '-o', 'cmd=', '-u', self.user]
+        bytes_out = subprocess.check_output(cmd, shell=False)
         return set(bytes_out.decode('utf8').splitlines())
 
 
