@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 
 from .environment import Platform
+from .fsutil import size_tool
 
 PLATFORM = Platform.detect()
 if PLATFORM == Platform.WINDOWS:
@@ -65,12 +66,25 @@ class LinuxDisk(Disk):
 class AbstractDiskManagement(ABC):
 
     @abstractmethod
+    def get_usage(self, path):
+        """Return usage in bytes under specified path."""
+        return int
+
+    @abstractmethod
+    def get_capacity(self, path):
+        """Return total capacity in bytes on specified disk."""
+        return int
+
+    @abstractmethod
     def get_free_space(self, path):
         """Return free bytes on specified disk."""
         return int
 
 
 class WinDiskManagement(AbstractDiskManagement):
+
+    def get_usage(self, path):
+        raise NotImplementedError("No tools supported for WSL")
 
     def get_capacity(self, path):
         for disk in self._enumerate_disks():
@@ -105,6 +119,9 @@ class WinDiskManagement(AbstractDiskManagement):
 
 
 class WslDiskManagement(AbstractDiskManagement):
+
+    def get_usage(self, path):
+        return size_tool.total_size(path)
 
     @staticmethod
     def get_capacity(path):
