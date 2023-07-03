@@ -33,9 +33,9 @@ def read_libraries():
     return [Library(id=i, **dict(lib)) for i, lib in enumerate(steam.libs)]
 
 
-@api_router.get("/libraries/{id}", response_model=Library)
-def read_library(id: int):
-    return [Library(id=i, **dict(lib)) for i, lib in enumerate(steam.libs)][id]
+@api_router.get("/libraries/{library_id}", response_model=Library)
+def read_library(library_id: int):
+    return [Library(id=i, **dict(lib)) for i, lib in enumerate(steam.libs)][library_id]
 
 
 @api_router.get("/archives/")

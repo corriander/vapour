@@ -36,7 +36,16 @@ class LinuxDisk(Disk):
 
     @classmethod
     def from_path(cls, path):
-        stat_result = os.statvfs(path)
+        try:
+            stat_result = os.statvfs(path)
+        except OSError as e:
+            if PLATFORM == Platform.WSL:
+                raise RuntimeError(
+                    "Could not stat disk; if external ensure it's mounted first\n"
+                    "    sudo mount -t drvfs D: /mnt/d -o uid=$(id -u $USER),gid=$(id -g $USER),metadata"
+                ) from e
+            else:
+                raise
         free_blocks = stat_result.f_bfree
         free_bytes = free_blocks * stat_result.f_bsize
         capacity_blocks = stat_result.f_blocks
