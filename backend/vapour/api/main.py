@@ -1,10 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
 from .. import steam
 from .models import Library, Game, Archive
 
-app = FastAPI()
+app = FastAPI(title="Vapour API", openapi_url="/openapi.json")
+api_router = APIRouter()
 
 origins = [
     "http://localhost:3000",
@@ -22,42 +23,42 @@ app.add_middleware(
 )
 
 
-@app.get("/", tags=['root'])
+@api_router.get("/", tags=['root'])
 async def read_root() -> dict:
     return {"message": "no data here"}
 
 
-@app.get("/libraries/")
+@api_router.get("/libraries/")
 def read_libraries():
     return [Library(id=i, **dict(lib)) for i, lib in enumerate(steam.libs)]
 
 
-@app.get("/libraries/{id}", response_model=Library)
+@api_router.get("/libraries/{id}", response_model=Library)
 def read_library(id: int):
     return [Library(id=i, **dict(lib)) for i, lib in enumerate(steam.libs)][id]
 
 
-@app.get("/archives/")
+@api_router.get("/archives/")
 def read_archives():
     return [Archive(id=i, **dict(lib)) for i, lib in enumerate(steam.archives)]
 
 
-@app.get("/archives/{archive_id}/games/")
+@api_router.get("/archives/{archive_id}/games/")
 def read_archive_games(archive_id: int):
     return [Game(**dict(game)) for game in steam.archives[archive_id].games]
 
 
-@app.get("/libraries/{library_id}/games/")
+@api_router.get("/libraries/{library_id}/games/")
 def read_library_games(library_id: int):
     return [Game(**dict(game)) for game in steam.libs[library_id].games]
 
 
-@app.get("/games/")
+@api_router.get("/games/")
 def read_all_games():
     return [Game(**dict(game)) for lib in steam.libs for game in lib.games]
 
 
-@app.get("/games/{game_id}", response_model=Game)
+@api_router.get("/games/{game_id}", response_model=Game)
 def read_game(game_id: int):
     return {
         game.id: game
@@ -65,12 +66,12 @@ def read_game(game_id: int):
     }[game_id]
 
 
-@app.get("/archived-games/")
+@api_router.get("/archived-games/")
 def read_all_games():
     return [Game(**dict(game)) for archive in steam.archives for game in archive.games]
 
 
-@app.get("/archived-games/{game_id}", response_model=Game)
+@api_router.get("/archived-games/{game_id}", response_model=Game)
 def read_game(game_id: int):
     return {
         game.id: game
@@ -78,3 +79,14 @@ def read_game(game_id: int):
             Game(**dict(game)) for archive in steam.archives for game in archive.games
         ]
     }[game_id]
+
+
+app.include_router(api_router)
+
+
+def run():
+    import uvicorn
+
+    uvicorn.run(
+        "vapour.api.main:app", host="0.0.0.0", port=8001, log_level="debug", reload=True
+    )
