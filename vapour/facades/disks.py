@@ -19,6 +19,7 @@ if PLATFORM == Platform.WINDOWS:
 # --------------------------------------------------------------------
 Disk = namedtuple('Disk', 'root, free_bytes, capacity_bytes')
 
+
 class WindowsDisk(Disk):
     __slots__ = ()
 
@@ -27,11 +28,7 @@ class WindowsDisk(Disk):
         free_bytes = int(wmi_object.freespace)
         capacity_bytes = int(wmi_object.size)
         root = wmi_object.caption
-        return cls(
-            root=root,
-            free_bytes=free_bytes,
-            capacity_bytes=capacity_bytes
-        )
+        return cls(root=root, free_bytes=free_bytes, capacity_bytes=capacity_bytes)
 
 
 class LinuxDisk(Disk):
@@ -45,11 +42,7 @@ class LinuxDisk(Disk):
         capacity_blocks = stat_result.f_blocks
         capacity_bytes = capacity_blocks * stat_result.f_bsize
         root = cls._find_mount_point(path)
-        return cls(
-            root=root,
-            free_bytes=free_bytes,
-            capacity_bytes=capacity_bytes
-        )
+        return cls(root=root, free_bytes=free_bytes, capacity_bytes=capacity_bytes)
 
     @staticmethod
     def _find_mount_point(path):
@@ -59,11 +52,11 @@ class LinuxDisk(Disk):
             path = os.path.dirname(path)
         return path
 
+
 # --------------------------------------------------------------------
 # Platform-dependent disk management facade.
 # --------------------------------------------------------------------
 class AbstractDiskManagement(ABC):
-
     @abstractmethod
     def get_free_space(self, path):
         """Return free bytes on specified disk."""
@@ -71,7 +64,6 @@ class AbstractDiskManagement(ABC):
 
 
 class WinDiskManagement(AbstractDiskManagement):
-
     def get_capacity(self, path):
         for disk in self._enumerate_disks():
             if disk.root == self._get_drive_prefix(path):
@@ -105,7 +97,6 @@ class WinDiskManagement(AbstractDiskManagement):
 
 
 class WslDiskManagement(AbstractDiskManagement):
-
     @staticmethod
     def get_capacity(path):
         return LinuxDisk.from_path(path).capacity_bytes
@@ -120,15 +111,13 @@ class WslDiskManagement(AbstractDiskManagement):
         relative_path = os.path.join(*path.split(ntpath.sep))
         if drive:
             # Windows path
-            path = os.path.join('/', 'mnt', drive[0].lower(),
-                                relative_path)
+            path = os.path.join('/', 'mnt', drive[0].lower(), relative_path)
         else:
             path = relative_path
 
         return os.path.normpath(path)
 
 
-DiskManagement = {
-    Platform.WINDOWS: WinDiskManagement,
-    Platform.WSL: WslDiskManagement
-}[PLATFORM]
+DiskManagement = {Platform.WINDOWS: WinDiskManagement, Platform.WSL: WslDiskManagement}[
+    PLATFORM
+]

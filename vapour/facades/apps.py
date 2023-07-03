@@ -4,7 +4,7 @@ import os
 from abc import ABC, abstractmethod
 from enum import Enum
 
-import psutil # NOTE: multi-platform but not used here for wsl
+import psutil  # NOTE: multi-platform but not used here for wsl
 
 from .config import Settings
 from .environment import Platform
@@ -12,6 +12,7 @@ from .environment import Platform
 PLATFORM = Platform.detect()
 if PLATFORM == Platform.WINDOWS:
     import winreg
+
 
 # --------------------------------------------------------------------
 # Operating System contexts
@@ -30,7 +31,6 @@ class AbstractOperatingSystemContext(ABC):
 
 
 class WslContext(AbstractOperatingSystemContext):
-
     def running_processes(self):
         cmd = "tasklist.exe | awk '{print $1}'"
         bytes_out = subprocess.check_output(cmd, shell=True)
@@ -38,7 +38,6 @@ class WslContext(AbstractOperatingSystemContext):
 
 
 class WindowsContext(AbstractOperatingSystemContext):
-
     def running_processes(self):
         return set([ps.name() for ps in psutil.process_iter()])
 
@@ -47,7 +46,6 @@ class WindowsContext(AbstractOperatingSystemContext):
 # Supported Apps
 # --------------------------------------------------------------------
 class App(ABC):
-
     settings = Settings()
 
     @property
@@ -77,22 +75,17 @@ class App(ABC):
 
         if not case_sensitive:
             this_process = this_process.lower()
-            process_names = set([
-                name.lower()
-                for name in process_names
-            ])
+            process_names = set([name.lower() for name in process_names])
 
         return this_process in process_names
 
 
 class WindowsApp(App):
-
     def is_running(self, case_sensitive=False):
         return super().is_running(case_sensitive=case_sensitive)
 
 
 class Steam(WindowsApp):
-
     REGISTRY_KEY = r'SOFTWARE\Valve\Steam'
     REGISTRY_KEY_INSTALL_PATH = 'SteamPath'
 
@@ -118,7 +111,6 @@ class Steam(WindowsApp):
             self._install_path = path
             return path
 
-
     def _get_install_path_from_winreg(self):
         try:
             key = winreg.HKEY_CURRENT_USER
@@ -130,14 +122,10 @@ class Steam(WindowsApp):
         access_flag = winreg.KEY_QUERY_VALUE
 
         steam_key = winreg.OpenKey(key, subkey, access=access_flag)
-        value_typeflag = winreg.QueryValueEx(
-            steam_key,
-            self.REGISTRY_KEY_INSTALL_PATH
-        )
+        value_typeflag = winreg.QueryValueEx(steam_key, self.REGISTRY_KEY_INSTALL_PATH)
         return os.path.normpath(value_typeflag[0])
 
 
-OperatingSystemContext = {
-    Platform.WSL: WslContext,
-    Platform.WINDOWS: WindowsContext
-}[PLATFORM]
+OperatingSystemContext = {Platform.WSL: WslContext, Platform.WINDOWS: WindowsContext}[
+    PLATFORM
+]
