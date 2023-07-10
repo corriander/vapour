@@ -17,54 +17,11 @@ with this.
 Usage
 -----
 
-### UI
+See subproject READMEs for usage, but in brief to run the local development server
 
-    conda install nodejs
-    npm install npm@latest -g
+In </backend>: `poetry run api`
 
-### API
-
-	uvicorn vapour.api.main:app --reload
-	http://127.0.0.1:8000/docs
-
-### Redis & Dramatiq
-
-Redis is used as a message broker for archive requests via the React UI.
-
-	sudo service redis-server start
-
-Dramatiq is used for worker threads responsible for handling messages posted to the queue
-
-	dramatiq vapour.workers
-
-
-### Library Management
-
-Archiving and removing a game from the steam library to make space for
-another without the need to re-download:
-
-	conda activate gameadmin
-	python
-	>>> from gameadmin import steam
-	>>> libs = steam.libs
-	>>> print(libs[0].as_table())
-	>>> game = libs[0].select('MyGame')
-	>>> game.archive()
-	>>> game.remove()
-
-
-#### Configuration
-
-Add a `settings.json` to `~/AppData/Local/gameadmin` or
-`~/.config/gameadmin` in Linux containing something like:
-
-	{
-		"collections": {
-			"archives": [
-				"/path/to/archive/dir"
-			]
-		}
-	}
+In </vapourui>: `yarn start`
 
 ### PostgreSQL Storage
 
@@ -135,25 +92,3 @@ NULLs are ' '; this also needs fixing:
 > happen in the pre-processing step.
 
 
-Issues
-------
-
-### `steam`
-
-  - Archiving should remove the game from the library by default. It's
-    not that sensible to treat a game as "archived" if it's remained
-	in a library and since had significant updates. Removing the game
-	(making it either active or inactive) sidesteps this and is
-	probably the desired effect. This also avoids having to implement
-	an easy way of checking whether a game is in the archive (it
-	either is in there, *or* a library).
-
-	> The only issue with this is that archiving is being used as a
-	> safety net for moving games between libraries. That said,
-	> libraries exist on different filesystems, so there's no
-	> opportunity for a quick from lib-to-lib, but there's a
-	> possibility of a quick move from lib-to-archive, or
-	> archive-to-lib, as that may exist on the same filesystem...
-	> (though it seems rather pointless having games archived when
-	> they could be installed in a co-located library - it's just
-	> ended up this way on my system).

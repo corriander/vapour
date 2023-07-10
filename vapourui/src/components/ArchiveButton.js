@@ -6,7 +6,7 @@ export default function ArchiveButton (props) {
 
     const handleClick = () => {
         setEnabled(false)
-        fetch(`${process.env.REACT_APP_API_BASE_URL}/archives/${props.archiveId}/games/${props.appId}`, {
+        fetch(`/archives/${props.archiveId}/games/${props.appId}`, {
             method: 'PUT'
         })
     }

@@ -3,6 +3,7 @@ from typing import List
 
 from pydantic import BaseModel as OriginalBaseModel
 
+
 def snakecase_to_camelcase(string):
     # https://stackoverflow.com/q/19053707
     return re.sub(r'_([a-z])', lambda x: x.group(1).upper(), string)

@@ -53,7 +53,6 @@ FILENAME_LIBRARY_FOLDERS = 'steamapps/libraryfolders.vdf'
 
 
 class Model(abc.ABC, LoggingMixin):
-
     @abc.abstractproperty
     def data_attributes(self):
         return tuple()
@@ -180,10 +179,10 @@ class AppManifest(AppInstance):
     def archive(self, archive=None, safe=True):
         """Copy game data and manifest to the archive."""
         if safe:
-            abort_if_steam_is_running() # TODO: Necessary?
+            abort_if_steam_is_running()  # TODO: Necessary?
 
         if archive is None:
-            archive = Archive() # Use the default
+            archive = Archive()  # Use the default
 
         archiver = Archivist()
         archiver.archive(self, archive)
@@ -213,19 +212,18 @@ class AppManifest(AppInstance):
 
         # Some older manifests have non-relative install paths. It's
         # best to just change these at source...
-        split_path = tuple(filter(
-            None,
-            os.path.split(os.path.normpath(self._installdir))
-        ))
+        split_path = tuple(
+            filter(None, os.path.split(os.path.normpath(self._installdir)))
+        )
         msg = "Non-relative installdir in appmanifest."
         assert len(split_path) == 1, msg
 
         if fast:
-            if not same_partition(self.install_path,
-                                  dst.install_path):
+            if not same_partition(self.install_path, dst.install_path):
                 # It'll be copied anyway.
-                msg = ("Fast move not possible between partitions; "
-                       "ignoring `fast=True`")
+                msg = (
+                    "Fast move not possible between partitions; " "ignoring `fast=True`"
+                )
                 warnings.warn(msg)
                 fast = False
 
@@ -246,32 +244,27 @@ class AppManifest(AppInstance):
             shutil.rmtree(self.install_path)
 
     def remove(self):
-        """Remove app manifest and data from the associated library.
-        """
+        """Remove app manifest and data from the associated library."""
         self.lib.remove(self)
 
     def size_delta(self):
-        """Get the difference in size between the manifest and data.
-        """
+        """Get the difference in size between the manifest and data."""
         return self.size - self.inspect_size()
 
     def _copy_manifest(self, lib):
         src = self.path
-        dst = os.path.join(lib.path, 'steamapps',
-                           os.path.basename(self.path))
+        dst = os.path.join(lib.path, 'steamapps', os.path.basename(self.path))
         shutil.copyfile(src, dst)
         return dst
 
     def _copy_install_files(self, lib):
         src = self.install_path
-        dst = os.path.join(lib.install_path,
-                           os.path.basename(self.install_path))
+        dst = os.path.join(lib.install_path, os.path.basename(self.install_path))
         shutil.copytree(src, dst)
 
     def _move_install_files(self, lib):
         src = self.install_path
-        dst = os.path.join(lib.install_path,
-                           os.path.basename(self.install_path))
+        dst = os.path.join(lib.install_path, os.path.basename(self.install_path))
         shutil.move(src, dst)
 
     def __hash__(self):
@@ -288,7 +281,6 @@ class AppManifest(AppInstance):
 
 
 class Library(Model):
-
     disk_management = DiskManagement()
 
     data_attributes = (
@@ -297,7 +289,7 @@ class Library(Model):
         'apps_path',
         'size',
         'free_bytes',
-        'games'
+        'games',
     )
 
     def __init__(self, path):
@@ -311,9 +303,7 @@ class Library(Model):
     @property
     def free_bytes(self):
         """Free disk space available to this library in Bytes."""
-        return self.disk_management.get_free_space(
-            self.install_path
-        )
+        return self.disk_management.get_free_space(self.install_path)
 
     @property
     def install_path(self):
@@ -353,6 +343,7 @@ class Library(Model):
 
     def archive(self, appmanifest):
         appmanifest.archive()
+
     archive.__doc__ = AppManifest.archive.__doc__
 
     def get_manifests(self):
@@ -365,14 +356,15 @@ class Library(Model):
     def as_table(self, sort_by=('name.lower',), fmt='human'):
         """Summarise library as a table.
 
-            sort_by: sequence of strings
-                Specifies the attribute of a game to sort by.
-                'name.lower' and 'size.desc' are special cases for
-                normalised name sorting and largest to smallest.
+        sort_by: sequence of strings
+            Specifies the attribute of a game to sort by.
+            'name.lower' and 'size.desc' are special cases for
+            normalised name sorting and largest to smallest.
 
-            fmt: string in set {'human',}
-                Defines the format of the table contents.
+        fmt: string in set {'human',}
+            Defines the format of the table contents.
         """
+
         def sort_key(_manifest):
             values = []
             for attr in sort_by:
@@ -399,15 +391,9 @@ class Library(Model):
                 name = manifest.name[:47] + '...'
             else:
                 name = manifest.name
-            rows.append(
-                    fmt_string.format(name,
-                                      manifest.size / 1024**3,
-                                      manifest.id)
-            )
-        rows.append(' '*51 + '|' + ' '*10 + '|')
-        rows.append(
-            '{:>50s} | {:8.2f} |'.format('TOTAL', self.size / 1024**3)
-        )
+            rows.append(fmt_string.format(name, manifest.size / 1024**3, manifest.id))
+        rows.append(' ' * 51 + '|' + ' ' * 10 + '|')
+        rows.append('{:>50s} | {:8.2f} |'.format('TOTAL', self.size / 1024**3))
         return os.linesep.join(rows)
 
     def inspect_size(self):
@@ -440,13 +426,9 @@ class Library(Model):
         """
         issues_dict = {}
 
-        issues_dict['orphan-dirs'] = list(sorted(
-            self._orphan_directories()
-        ))
+        issues_dict['orphan-dirs'] = list(sorted(self._orphan_directories()))
 
-        issues_dict['dangling-manifests'] = list(
-            self._dangling_manifests()
-        )
+        issues_dict['dangling-manifests'] = list(self._dangling_manifests())
 
         issues_dict['size-discrepancy'] = self._size_discrepancies()
 
@@ -479,10 +461,7 @@ class Library(Model):
             lines.append(textwrap.dedent(blurb))
             for d in issues_dict['orphan-dirs']:
                 size = humanize.naturalsize(
-                    get_directory_size(
-                        os.path.join(self.install_path,
-                                     d)
-                    )
+                    get_directory_size(os.path.join(self.install_path, d))
                 )
                 lines.append('  - {} ({})'.format(d, size))
 
@@ -499,6 +478,7 @@ class Library(Model):
                 lines.append('  - {} (id: {})'.format(am.name, am.id))
 
         if issues_dict['size-discrepancy']:
+
             def hr_delta(delta):
                 if delta < 0:
                     relative = "bigger"
@@ -523,25 +503,22 @@ class Library(Model):
 
             lib_delta = issues_dict['size-discrepancy'].pop('lib')
             if lib_delta:
-                lines.append(
-                    textwrap.dedent(header.format(hr_delta(lib_delta)))
-                )
+                lines.append(textwrap.dedent(header.format(hr_delta(lib_delta))))
 
                 if issues_dict['size-discrepancy']:
-                    lines.append(textwrap.dedent("""
+                    lines.append(
+                        textwrap.dedent(
+                            """
                         The following games are known about by Steam,
                         but there appears to be a significant
                         difference in size between the content of the
                         app manifest and the size on disk (>0.1%):
-                    """))
-
-                for game, delta in issues_dict['size-discrepancy'].items():
-                    lines.append(
-                        "  - {} ({} on disk)".format(
-                            game,
-                            hr_delta(delta)
+                    """
                         )
                     )
+
+                for game, delta in issues_dict['size-discrepancy'].items():
+                    lines.append("  - {} ({} on disk)".format(game, hr_delta(delta)))
 
         return '\n'.join(lines)
 
@@ -560,7 +537,7 @@ class Library(Model):
         for root, dnames, fnames in os.walk(self.install_path):
             fs_dname_set_preserve_case = set(dnames)
             fs_dname_set = set(map(str.lower, dnames))
-            break	# We only care about the directories in root.
+            break  # We only care about the directories in root.
 
         am_dname_set = set(
             str.lower(os.path.basename(game.install_path))
@@ -592,8 +569,7 @@ class Library(Model):
         return d
 
     def contains(self, regex):
-        """Test whether the library contains a game matching regex.
-        """
+        """Test whether the library contains a game matching regex."""
         if self.select(regex):
             return True
         else:
@@ -628,13 +604,10 @@ class Library(Model):
         drive = self.__get_drive_caption()
         count = len(self.game_lookup)
         size = humanize.naturalsize(self.size)
-        return "Steam Library ({}, {} games, {})".format(drive,
-                                                         count,
-                                                         size)
+        return "Steam Library ({}, {} games, {})".format(drive, count, size)
 
     def __repr__(self):
-        return "<{}(path='{}')>".format(self.__class__.__name__,
-                                        self.path)
+        return "<{}(path='{}')>".format(self.__class__.__name__, self.path)
 
 
 class SteamApp(object):
@@ -642,6 +615,7 @@ class SteamApp(object):
 
     An may be installed and/or archived once.
     """
+
     def __init__(self, installed_instance, archived_instance):
         if installed_instance is None and archived_instance is None:
             msg = "Must supply one of installed or archived copy!"
@@ -690,24 +664,87 @@ class SteamApp(object):
             return getattr(self.archived_instance, attr)
 
 
+# class ArchivedGame(AppInstance):
+#
+# 	data_attributes = ()
+#
+# 	@classmethod
+# 	def from_library_manifest(cls, manifest_path, lib=None):
+# 		archived_game = cls(manifest_path=None, container=None)
+# 		archived_game.installed_instance = AppManifest(manifest_path, lib)
+# 		if archived_game.installed_instance.archived_instance is None:
+#
+# 		return archived_game
 
 
-#class ArchivedGame(AppInstance):
-#
-#	data_attributes = ()
-#
-#	@classmethod
-#	def from_library_manifest(cls, manifest_path, lib=None):
-#		archived_game = cls(manifest_path=None, container=None)
-#		archived_game.installed_instance = AppManifest(manifest_path, lib)
-#		if archived_game.installed_instance.archived_instance is None:
-#
-#		return archived_game
+class SteamApp(object):
+    """Models a steam application / game present on the system.
 
+    An may be installed and/or archived once.
+    """
+
+    def __init__(self, installed_instance, archived_instance):
+        if installed_instance is None and archived_instance is None:
+            msg = "Must supply one of installed or archived copy!"
+            raise TypeError(msg)
+        self.installed_instance = installed_instance
+        self.archived_instance = archived_instance
+
+    @classmethod
+    def from_app_id(cls, app_id):
+        """Instantiate an installed or archived game.
+
+        Returns
+        -------
+
+        SteamApp
+        """
+        installed = Librarian().search_libraries(app_id)
+        archived = Archivist().search_archives(app_id)
+        return cls(installed, archived)
+
+    @classmethod
+    def from_archived_manifest(cls, manifest_path, archive):
+        archived_instance = AppManifest(manifest_path, archive)
+        installed_instance = Librarian().search_libraries(archived_instance.id)
+        return cls(installed_instance, archived_instance)
+
+    @classmethod
+    def from_installed_manifest(cls, manifest_path, library):
+        installed_instance = AppManifest(manifest_path, library)
+        archived_instance = Archivist().search_archives(installed_instance.id)
+        return cls(installed_instance, archived_instance)
+
+    @property
+    def is_archived(self) -> bool:
+        return self.archived_instance is not None
+
+    @property
+    def archive_is_current(self) -> bool:
+        # Not implemented
+        return self.is_archived and False
+
+    def __getattr__(self, attr):
+        try:
+            return getattr(self.installed_instance, attr)
+        except AttributeError:
+            return getattr(self.archived_instance, attr)
+
+
+# class ArchivedGame(AppInstance):
+#
+# 	data_attributes = ()
+#
+# 	@classmethod
+# 	def from_library_manifest(cls, manifest_path, lib=None):
+# 		archived_game = cls(manifest_path=None, container=None)
+# 		archived_game.installed_instance = AppManifest(manifest_path, lib)
+# 		if archived_game.installed_instance.archived_instance is None:
+#
+# 		return archived_game
 
 
 class Archive(Library):
-
     data_attributes = Library.data_attributes + ('max_size',)
 
     def __init__(self, path=PATH_ARCHIVE[0]):
@@ -719,15 +756,12 @@ class Archive(Library):
 
     @property
     def install_path(self):
-        """Path of game install directories in Archive.
-
-        """
+        """Path of game install directories in Archive."""
         return self.apps_path
 
     @property
     def max_size(self):
-        """Ideal maximum size of the archive (leave 10% disk free)
-        """
+        """Ideal maximum size of the archive (leave 10% disk free)"""
         disk_buffer = 0.1
         disk_capacity = self.disk_management.get_capacity(self.path)
         disk_free = self.free_bytes
@@ -744,9 +778,7 @@ class Archive(Library):
         redundant_games = []
         for name in self.game_lookup:
             hits = locate_game(name)
-            redundant_games.extend(
-                [(lib.select(name)[0], lib) for lib in hits]
-            )
+            redundant_games.extend([(lib.select(name)[0], lib) for lib in hits])
 
         if redundant_games:
             issues_dict['redundant-data'] = redundant_games
@@ -792,8 +824,9 @@ class Archive(Library):
                 by name.
         """
         if all(arg is None for arg in (appmanifest, pattern)):
-            raise TypeError("Either appmanifest or pattern "
-                            "must have a meaningful value.")
+            raise TypeError(
+                "Either appmanifest or pattern " "must have a meaningful value."
+            )
 
         appmanifests_to_remove = []
 
@@ -831,14 +864,12 @@ class Archive(Library):
             # Remove the AppManifest, followed by the data
             os.remove(am.path)
             try:
-                shutil.rmtree(os.path.join(
-                    self.apps_path,
-                    os.path.basename(am.install_path)
-                ))
+                shutil.rmtree(
+                    os.path.join(self.apps_path, os.path.basename(am.install_path))
+                )
             except FileNotFoundError:
                 # Dangling manifest
-                print("{} dangling manifest has been "
-                      "removed.".format(am.name))
+                print("{} dangling manifest has been " "removed.".format(am.name))
                 continue
             print("{} has been removed.".format(am.name))
 
@@ -848,15 +879,13 @@ class Archive(Library):
         abort_if_steam_is_running()
 
         installdir = os.path.basename(appmanifest.install_path)
-        src = os.path.join(os.path.dirname(appmanifest.path),
-                           installdir)
+        src = os.path.join(os.path.dirname(appmanifest.path), installdir)
         dst = os.path.join(lib.install_path, installdir)
         shutil.copytree(src, dst)
 
 
 class Librarian(LoggingMixin, object):
-    """Responsible for managing installed games.
-    """
+    """Responsible for managing installed games."""
 
     @staticmethod
     def get_libraries():
@@ -879,8 +908,7 @@ class Librarian(LoggingMixin, object):
 
 
 class Archivist(LoggingMixin, object):
-    """Responsible for managing archived games.
-    """
+    """Responsible for managing archived games."""
 
     def archive(self, game, archive):
         """Copy game data and manifest to the archive."""
@@ -918,8 +946,7 @@ class Archivist(LoggingMixin, object):
         match = None
         if matches:
             if len(matches) > 1:
-                msg = (f"More than one copy of Game "
-                        "with {app_id} in archives")
+                msg = f"More than one copy of Game " "with {app_id} in archives"
                 warnings.warn(msg)
             match = matches[0]
         return match
@@ -943,26 +970,23 @@ class Archivist(LoggingMixin, object):
 
     @staticmethod
     def _backout__delete_manifest(game, archive):
-        archived_manifest_path = os.path.join(
-            archive.path,
-            os.path.basename(game.path)
-        )
+        archived_manifest_path = os.path.join(archive.path, os.path.basename(game.path))
         os.remove(archived_manifest_path)
 
     @classmethod
     def _copy(cls, source, destination):
         clone_tool.clone(source, destination)
-        #try:
-        #	cls._rsync(source, destination)
-        #except FileNotFoundError:
-        #	shutil.copytree(source, destination, dirs_exist_ok=True)
+        # try:
+        # 	cls._rsync(source, destination)
+        # except FileNotFoundError:
+        # 	shutil.copytree(source, destination, dirs_exist_ok=True)
 
     @staticmethod
     def _rsync(source, destination):
         result = subprocess.run(
             ['rsync', '-azP', source, destination],
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
         )
         result.check_returncode()
         return result
@@ -1030,15 +1054,12 @@ def get_libraries():
     i = 1
     while True:
         try:
-            lib_paths.append(
-                DiskManagement.translate_path(dct[str(i)])
-            )
+            lib_paths.append(DiskManagement.translate_path(dct[str(i)]))
         except KeyError:
             break
         i += 1
 
     return list(map(Library, lib_paths))
-
 
 
 def same_partition(path1, path2):
@@ -1052,10 +1073,9 @@ def same_partition(path1, path2):
         # TODO: See Library._orphan_directories TODO.
         raise NotImplementedError("Algorithm not implemented.")
 
-    common_prefix = os.path.commonprefix(list(map(
-        os.path.normpath,
-        map(str.lower, [path1, path2])
-    )))
+    common_prefix = os.path.commonprefix(
+        list(map(os.path.normpath, map(str.lower, [path1, path2])))
+    )
 
     if common_prefix:
         return True
@@ -1100,8 +1120,9 @@ def abort_if_not_archived(appmanifest):
 
     archived_game = archive.select(game)[0]
 
-    size_delta = (appmanifest.inspect_size() -
-                  archive.get_archived_game_size(archived_game))
+    size_delta = appmanifest.inspect_size() - archive.get_archived_game_size(
+        archived_game
+    )
 
     if appmanifest != archived_game or size_delta:
         # TODO: Consider going deeper to inspect how...
@@ -1111,9 +1132,7 @@ def abort_if_not_archived(appmanifest):
 def abort_if_steam_is_running():
     # TODO: This is begging to be a decorator.
     if steam_is_running():
-        raise RuntimeError(
-            "Steam is running; probably a good idea to exit..."
-        )
+        raise RuntimeError("Steam is running; probably a good idea to exit...")
 
 
 def steam_is_running():

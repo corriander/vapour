@@ -8,22 +8,16 @@ if Platform.detect() == Platform.WINDOWS:
     import winreg
 
     class XDG(object):
-        XDG_CONFIG_HOME = os.path.normpath(
-            os.path.expanduser('~/AppData/Local')
-        )
+        XDG_CONFIG_HOME = os.path.normpath(os.path.expanduser('~/AppData/Local'))
+
     xdg = XDG
 
 else:
-    import xdg # Incompatibility with python versions used by WMI
+    import xdg  # Incompatibility with python versions used by WMI
 
 
 class Settings(object):
-
-    path = os.path.join(
-        xdg.XDG_CONFIG_HOME,
-        'vapour',
-        'settings.json'
-    )
+    path = os.path.join(xdg.XDG_CONFIG_HOME, 'vapour', 'settings.json')
 
     def __init__(self):
         with open(self.path) as f:
@@ -58,7 +52,6 @@ class Settings(object):
 
 
 class ConfigMixin(object):
-
     settings = Settings()
 
     @property

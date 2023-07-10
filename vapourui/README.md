@@ -1,3 +1,27 @@
+Vapour UI
+===
+
+Frontend to the API implemented as a React SPA
+
+Usage
+---
+
+
+> Latest tested Node.js LTS at time of writing
+
+    nvm install 18
+	nvm use 18
+
+	corepack enable
+	corepack prepare yarn@latest --activate
+
+	yarn install
+	yarn start
+
+
+> See following sections for boilerplate added by CRA
+
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).

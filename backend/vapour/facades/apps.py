@@ -4,7 +4,7 @@ import subprocess
 import os
 from abc import ABC, abstractmethod
 
-import psutil # NOTE: multi-platform but not used here for wsl
+import psutil  # NOTE: multi-platform but not used here for wsl
 
 from .config import ConfigMixin
 from .environment import Platform
@@ -12,6 +12,7 @@ from .environment import Platform
 PLATFORM = Platform.detect()
 if PLATFORM == Platform.WINDOWS:
     import winreg
+
 
 # --------------------------------------------------------------------
 # Operating System contexts
@@ -32,13 +33,11 @@ class AbstractOperatingSystemContext(ABC):
     def user(self):
         return getpass.getuser()
 
-class WslContext(AbstractOperatingSystemContext):
 
+class WslContext(AbstractOperatingSystemContext):
     def running_processes(self):
-        return (
-            self._running_processes_winhost().union(
-                self._running_processes_internal()
-            )
+        return self._running_processes_winhost().union(
+            self._running_processes_internal()
         )
 
     def _running_processes_winhost(self):
@@ -53,7 +52,6 @@ class WslContext(AbstractOperatingSystemContext):
 
 
 class WindowsContext(AbstractOperatingSystemContext):
-
     def running_processes(self):
         return set([ps.name() for ps in psutil.process_iter()])
 
@@ -62,7 +60,6 @@ class WindowsContext(AbstractOperatingSystemContext):
 # Supported Apps
 # --------------------------------------------------------------------
 class App(ABC, ConfigMixin):
-
     @property
     def install_path(self):
         return self._install_path
@@ -81,22 +78,17 @@ class App(ABC, ConfigMixin):
 
         if not case_sensitive:
             this_process = this_process.lower()
-            process_names = set([
-                name.lower()
-                for name in process_names
-            ])
+            process_names = set([name.lower() for name in process_names])
 
         return this_process in process_names
 
 
 class WindowsApp(App):
-
     def is_running(self, case_sensitive=False):
         return super().is_running(case_sensitive=case_sensitive)
 
 
 class Steam(WindowsApp):
-
     REGISTRY_KEY = r'SOFTWARE\Valve\Steam'
     REGISTRY_KEY_INSTALL_PATH = 'SteamPath'
 
@@ -122,7 +114,6 @@ class Steam(WindowsApp):
             self._install_path = path
             return path
 
-
     def _get_install_path_from_winreg(self):
         try:
             key = winreg.HKEY_CURRENT_USER
@@ -134,14 +125,10 @@ class Steam(WindowsApp):
         access_flag = winreg.KEY_QUERY_VALUE
 
         steam_key = winreg.OpenKey(key, subkey, access=access_flag)
-        value_typeflag = winreg.QueryValueEx(
-            steam_key,
-            self.REGISTRY_KEY_INSTALL_PATH
-        )
+        value_typeflag = winreg.QueryValueEx(steam_key, self.REGISTRY_KEY_INSTALL_PATH)
         return os.path.normpath(value_typeflag[0])
 
 
-OperatingSystemContext = {
-    Platform.WSL: WslContext,
-    Platform.WINDOWS: WindowsContext
-}[PLATFORM]
+OperatingSystemContext = {Platform.WSL: WslContext, Platform.WINDOWS: WindowsContext}[
+    PLATFORM
+]

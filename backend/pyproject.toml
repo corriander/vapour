@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "vapour"
+version = "0.0.0"
+description = "Tools for working with Steam (+ other) game libraries"
+authors = ["Alex Corrie <ajccode@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "vapour"}]
+
+[tool.poetry.scripts]
+api = "vapour.api.main:run"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.99.1"
+pydantic = "<2.0.0"
+humanize = "^4.7.0"
+vdf = "^3.4"
+psutil = "^5.9.5"
+xdg = "^6.0.0"
+dramatiq = {extras = ["redis", "watch"], version = "^1.14.2"}
+
+
+[tool.poetry.group.dev.dependencies]
+uvicorn = "^0.22.0"
+ipython = "^8.14.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
