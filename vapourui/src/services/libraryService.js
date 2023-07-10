@@ -1,29 +1,29 @@
 export async function getLibraryGames(key, libraryId) {
-    return fetch(`${process.env.REACT_APP_API_BASE_URL}/libraries/${libraryId}/games/`)
+  return fetch(`/libraries/${libraryId}/games/`)
       .then(response => response.json());
 }
 
 export async function getLibraries() {
-    return fetch(`${process.env.REACT_APP_API_BASE_URL}/libraries/`)
+  return fetch(`/libraries/`)
       .then(response => response.json());
 }
 
 export async function getArchives() {
-    return fetch(`${process.env.REACT_APP_API_BASE_URL}/archives/`)
+  return fetch(`/archives/`)
       .then(response => response.json());
 }
 
 export async function getArchiveGames(key, archiveId) {
-    return fetch(`${process.env.REACT_APP_API_BASE_URL}/archives/${archiveId}/games/`)
+  return fetch(`/archives/${archiveId}/games/`)
       .then(response => response.json());
 }
 
 export async function getGame(key, appId) {
-    return fetch(`${process.env.REACT_APP_API_BASE_URL}/games/${appId}`)
+  return fetch(`/games/${appId}`)
       .then(response => response.json());
 }
 
 export async function getArchivedGame(key, appId) {
-    return fetch(`${process.env.REACT_APP_API_BASE_URL}/archived-games/${appId}`)
+  return fetch(`/archived-games/${appId}`)
       .then(response => response.json());
 }
